@@ -28,10 +28,9 @@ class WeatherInfo (Base) :
 
 Base.metadata.create_all(engine)
 
-# Delete all rows, recreate by reading csv
-from sqlalchemy import delete
-stmt_del = delete(WeatherInfo)
-stmt_del.compile()
+# Delete all prev records
+session.query(WeatherInfo).delete()
+session.commit()
 
 rows = []
 with open("weather.csv", 'r') as file:
