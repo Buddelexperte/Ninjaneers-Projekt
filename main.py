@@ -29,32 +29,19 @@ class WeatherInfo (Base) :
 Base.metadata.create_all(engine)
 
 
-
+rows = []
+with open("weather.csv", 'r') as file:
+    csvreader = csv.reader(file)
+    header = next(csvreader)
+    for row in csvreader:
+        rows.append(row)
 
 # New Sets
-new_set = WeatherInfo(date = date(2025, 7, 26), precipitation= 2.2, temp_max = 24.3, temp_min= 0.2, wind= 0.1, weather= "sun" )
-
+#new_set = WeatherInfo(date = date(2025, 7, 26), precipitation= 2.2, temp_max = 24.3, temp_min= 0.2, wind= 0.1, weather= "sun" )
 
 # Adding sets as changes to session
-session.add(new_set)
+#session.add(new_set)
+
 
 # Commiting changes
 session.commit()
-
-weatherFile = open('weather.csv')
-type(weatherFile)
-csvreader = csv.reader(weatherFile)
-
-#Empty list
-header = ['Date']
-#header = next(csvreader)
-#header
-
-print(header)
-
-#rows = []
-#for row in csvreader:
-#rows.append(row)
-#rows
-
-weatherFile.close()
