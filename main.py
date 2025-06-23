@@ -46,13 +46,15 @@ type(weatherFile)
 csvreader = csv.reader(weatherFile)
 
 #Empty list
-header = []
-header = next(csvreader)
-header
+header = ['Date']
+#header = next(csvreader)
+#header
 
-rows = []
-for row in csvreader:
-rows.append(row)
-rows
+print(header)
+
+#rows = []
+#for row in csvreader:
+#rows.append(row)
+#rows
 
 weatherFile.close()
