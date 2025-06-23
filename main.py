@@ -32,7 +32,7 @@ class WeatherInfo (Base) :
     wind = Column(Float)
     weather= Column(String(10))
 
-url = "mysql+pymysql://user:passwort@localhost:3306/weather_data"
+url = "mysql+pymysql://root:@localhost:3306/weather_data"
 
 engine = create_engine(url, echo=True)
 
@@ -44,6 +44,9 @@ from sqlalchemy import insert
 
 new_set = WeatherInfo(date = date(2025, 7, 26), precipitation= 2.2, temp_max = 24.3, temp_min= 0.2, wind= 0.1, weather= "sun" )
 
+print("Test")
 session.add(new_set)
+
+
 
 session.commit()
