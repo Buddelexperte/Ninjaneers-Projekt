@@ -4,6 +4,7 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy import MetaData
 metadata_obj = MetaData()
 from datetime import date
+import csv
 
 from sqlalchemy import Table, Column, Integer, String, Date, Float
 
@@ -44,8 +45,23 @@ from sqlalchemy import insert
 
 new_set = WeatherInfo(date = date(2025, 7, 26), precipitation= 2.2, temp_max = 24.3, temp_min= 0.2, wind= 0.1, weather= "sun" )
 
-print("Test")
-#test1
+
+weatherFile = open('weather.csv')
+type(weatherFile)
+csvreader = csv.reader(weatherFile)
+
+#Empty list
+header = []
+header = next(csvreader)
+header
+
+rows = []
+for row in csvreader:
+rows.append(row)
+rows
+
+weatherFile.close()
+
 session.add(new_set)
 
 
