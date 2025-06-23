@@ -28,6 +28,10 @@ class WeatherInfo (Base) :
 
 Base.metadata.create_all(engine)
 
+# Delete all rows, recreate by reading csv
+from sqlalchemy import delete
+stmt_del = delete(WeatherInfo)
+stmt_del.compile()
 
 rows = []
 with open("weather.csv", 'r') as file:
@@ -36,12 +40,28 @@ with open("weather.csv", 'r') as file:
     for row in csvreader:
         rows.append(row)
 
-# New Sets
-#new_set = WeatherInfo(date = date(2025, 7, 26), precipitation= 2.2, temp_max = 24.3, temp_min= 0.2, wind= 0.1, weather= "sun" )
+for row in rows:
+    date_str = row[0]
+    precip_str = row[1]
+    temp_max_str = row[2]
+    temp_min_str = row[3]
+    wind_str = row[4]
+    weather_str = row[5]
 
-# Adding sets as changes to session
-#session.add(new_set)
+    year = date_str[0:4]
+    month = date_str[5:7]
+    day = date_str[8:10]
 
+    new_set = WeatherInfo(
+        date=date(int(year), int(month), int(day)),
+        precipitation=float(precip_str),
+        temp_max=float(temp_max_str),
+        temp_min=float(temp_min_str),
+        wind=float(wind_str),
+        weather=weather_str,
+    )
+
+    session.add(new_set)
 
 # Commiting changes
 session.commit()
