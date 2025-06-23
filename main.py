@@ -64,5 +64,3 @@ for row in rows:
 
 # Commiting changes
 session.commit()
-
-exit()
