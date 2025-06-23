@@ -24,6 +24,6 @@ engine = create_engine(url, echo=True)
 session = Session(engine)
 
 from sqlalchemy import insert
-stmt = insert(weather_table).values(date="2015-01-01", precpitation=3.0, temp_max=1.0, temp_min=0.0, wind=0.0, weather="sun")
+stmt = insert(weather_table).values(date="2015-01-01", precipitation=3.0, temp_max=1.0, temp_min=0.0, wind=0.0, weather="sun")
 
 print(stmt)
