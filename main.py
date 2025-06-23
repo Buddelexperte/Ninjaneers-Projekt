@@ -21,7 +21,7 @@ class WeatherInfo (Base) :
     weather= Column(String(10))
 
 # Session creation
-url = "mysql+pymysql://user:passwort@localhost:3306/weather_data"
+url = "mysql+pymysql://root:@localhost:3306/weather_data"
 engine = create_engine(url, echo=True)
 session = Session(engine)
 
