@@ -2,6 +2,7 @@
 # Importing types
 from sqlalchemy import Table, Column, Integer, String, Date, Float, create_engine
 from sqlalchemy.orm import Session, declarative_base
+from datetime import date
 
 url = "mysql+pymysql://root:password@localhost:3306/weather_data"
 Engine = create_engine(url, echo=True)

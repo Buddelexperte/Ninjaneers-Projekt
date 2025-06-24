@@ -1,5 +1,7 @@
-from datetime import date
+
 import csv
+from datetime import date
+
 from src.settings import session, WeatherInfo
 
 
@@ -27,7 +29,7 @@ for row in rows:
     day = date_str[8:10]
 
     new_set = WeatherInfo(
-        date=date(int(year), int(month), int(day)),
+        date= date(int(year), int(month), int(day)),
         precipitation=float(precip_str),
         temp_max=float(temp_max_str),
         temp_min=float(temp_min_str),
