@@ -1,10 +1,6 @@
-
-
-
-
 from datetime import date
 import csv
-from settings import *
+from src.settings import session, WeatherInfo
 
 
 # Delete all prev records
@@ -12,7 +8,7 @@ session.query(WeatherInfo).delete()
 session.commit()
 
 rows = []
-with open("../weather.csv", 'r') as file:
+with open("weather.csv", 'r') as file:
     csvreader = csv.reader(file)
     header = next(csvreader)
     for row in csvreader:

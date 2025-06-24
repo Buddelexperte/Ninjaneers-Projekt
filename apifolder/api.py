@@ -1,5 +1,4 @@
-from fastapi import FastAPI
-from fastapi import APIRouter
+from fastapi import FastAPI, APIRouter
 from src.settings import Engine, WeatherInfo, Session
 from sqlalchemy import select
 
@@ -16,8 +15,7 @@ async def get_info():
     text :str
     with Session(Engine) as session:
         statement = select(WeatherInfo)
-        res = session.execute(statement).mappings().first()
-        text = str(dict(res)   )
-    return {text}
+        res = session.execute(statement).mappings().all()
+    return res
 
 
