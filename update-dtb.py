@@ -2,7 +2,6 @@ from datetime import date
 import csv
 from src.settings import session, WeatherInfo
 
-
 # Delete all prev records
 session.query(WeatherInfo).delete()
 session.commit()

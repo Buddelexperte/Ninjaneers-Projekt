@@ -1,9 +1,17 @@
 from fastapi import FastAPI, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 from src.settings import Engine, WeatherInfo, Session
 from sqlalchemy import select
 
+
 router = APIRouter()
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # React adress
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
