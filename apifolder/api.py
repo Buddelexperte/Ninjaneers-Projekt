@@ -13,10 +13,11 @@ async def root():
 
 @app.get("/weather")
 async def get_info():
+    text :str
     with Session(Engine) as session:
-        statement = select(WeatherInfo).where(WeatherInfo.wind == 5.8)
-        row = session.execute(statement).scalars().all()
-        text = str(row.wind)
-        return {text}
+        statement = select(WeatherInfo)
+        res = session.execute(statement).mappings().first()
+        text = str(dict(res)   )
+    return {text}
 
 
