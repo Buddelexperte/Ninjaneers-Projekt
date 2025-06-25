@@ -6,8 +6,7 @@ from src.settings import Engine, WeatherInfo, Session
 from sqlalchemy import select, text
 import matplotlib.pyplot as max_temp_diagram
 from pydantic import BaseModel
-import numpy as np
-import pandas as pd
+import requests
 
 
 
