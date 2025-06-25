@@ -23,3 +23,84 @@ h1 {
 .sortable:hover{
   text-decoration: underline;
 }
+
+.image-controls {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.control-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+
+.control-item label {
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.view-chart-button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: bold;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.view-chart-button:hover {
+  background-color: #0056b3;
+}
+
+.table-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.year-filter {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 1rem;
+  max-width: 200px;
+  min-width: 160px;
+  flex-shrink: 0;
+}
+
+.weather-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.weather-table-wrapper {
+  flex: 1;
+  overflow-x: auto;
+}
+
+.year-filter label {
+  font-weight: 500;
+}
+
+.year-filter select {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}

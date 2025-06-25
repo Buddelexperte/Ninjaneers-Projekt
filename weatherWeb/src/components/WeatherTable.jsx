@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
-const SortDirection = {
-  ASC: "asc",
-  DESC: "desc",
-};
+const dataTypes = [
+  "precipitation",
+  "temp_max",
+  "temp_min",
+  "wind",
+  "weather"
+];
 
 function openBase64Image(base64String) {
-  // Create a new window or tab and write the image to it
   const image = new Image();
   image.src = `data:image/png;base64,${base64String}`;
-
   const newTab = window.open();
   if (newTab) {
     newTab.document.body.innerHTML = "";
@@ -19,61 +22,18 @@ function openBase64Image(base64String) {
   }
 }
 
-async function fetchAndOpenImage() {
-  const res = await fetch("http://localhost:8000/weather/timeframe/2022-02-05/2022-02-06");
-  const data = await res.json();  // ✅ Parse JSON
-  const base64String = data.image_base64;
-
-  // Then open image
-  const img = new Image();
-  img.src = `data:image/png;base64,${base64String}`;
-
-  const newTab = window.open();
-  if (newTab) {
-    newTab.document.body.innerHTML = "";
-    newTab.document.body.appendChild(img);
-  } else {
-    alert("Popup blocked! Please allow popups for this site.");
-  }
-}
-
-async function fetchAllData() {
-  const url = "http://127.0.0.1:8000/weather/all";
-  return fetchData(url);
-
-}
-
-async function fetchAvailYears()
-{
-  const url = "http://127.0.0.1:8000/weather/years/all";
-  const rawYears = await fetchData(url);
-
-  return rawYears.map(y => parseInt(y));
-}
-
-async function fetchYearData(year)
-{
-  const url = `http://127.0.0.1:8000/weather/year/${year}`;
-  return fetchData(url);
-}
-
-async function fetchData(url)
-{
+async function fetchImageData(startDate, endDate, dataType) {
+  const url = `http://localhost:8000/weather/timeframe/${startDate}/${endDate}/${dataType}`;
   try {
-    const response = await fetch(url, {mode : "cors"});
-    if (!response.ok)
-    {
-      throw new Error(`Response status: ${response.status}`);
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Server error: ${res.status}`);
     }
-
-    const json = await response.json();
-    console.log(json);
-    return json;
-
-  } catch (error)
-  {
-    console.error(error.message);
-    return [];
+    const data = await res.json();
+    return data.image_base64;
+  } catch (error) {
+    console.error("Image fetch failed:", error.message);
+    return null;
   }
 }
 
@@ -81,130 +41,159 @@ function WeatherTable() {
   const [data, setData] = useState([]);
   const [years, setYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState("all");
-  const [sortConfig, setSortConfig] = useState({ col: "date", dir: SortDirection.ASC });
+  const [sortConfig, setSortConfig] = useState({ col: "date", dir: "asc" });
+
+  // UI state for image generation
+  const [selectedType, setSelectedType] = useState(null);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   useEffect(() => {
     (async () => {
-      const yearOptions = await fetchAvailYears();
-      setYears(yearOptions.map((y) => y.toString()));
+      const res = await fetch("http://127.0.0.1:8000/weather/years/all");
+      const rawYears = await res.json();
+      setYears(rawYears.map((y) => y.toString()));
     })();
   }, []);
 
   useEffect(() => {
     (async () => {
-      const result =
+      const url =
         selectedYear === "all"
-          ? await fetchAllData()
-          : await fetchYearData(selectedYear);
+          ? "http://127.0.0.1:8000/weather/all"
+          : `http://127.0.0.1:8000/weather/year/${selectedYear}`;
+      const result = await fetchData(url);
       setData(result);
     })();
   }, [selectedYear]);
 
   const handleSort = (col) => {
-    setSortConfig((prev) => {
-      if (prev.col === col) {
-        const newDir = prev.dir === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
-        return { col, dir: newDir };
-      }
-      return { col, dir: SortDirection.ASC };
-    });
+    setSortConfig((prev) =>
+      prev.col === col
+        ? { col, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { col, dir: "asc" }
+    );
   };
 
   const getSortedData = () => {
-    if (!sortConfig.col) return data;
     const sorted = [...data].sort((a, b) => {
       const rowA = a.WeatherInfo || a;
       const rowB = b.WeatherInfo || b;
       const valA = rowA[sortConfig.col];
       const valB = rowB[sortConfig.col];
-
-      if (valA < valB) return sortConfig.dir === SortDirection.ASC ? -1 : 1;
-      if (valA > valB) return sortConfig.dir === SortDirection.ASC ? 1 : -1;
-
+      if (valA < valB) return sortConfig.dir === "asc" ? -1 : 1;
+      if (valA > valB) return sortConfig.dir === "asc" ? 1 : -1;
       return 0;
     });
     return sorted;
   };
 
-  const getArrow = (col) => {
-    if (sortConfig.col !== col) return "";
-    return sortConfig.dir === SortDirection.ASC ? " ▲" : " ▼";
-  };
+  const handleImageRequest = async () => {
+    if (!startDate || !endDate || !selectedType) {
+      alert("Please select a start date, end date, and data type.");
+      return;
+    }
 
-  const sortedData = getSortedData();
+    const startStr = startDate.toISOString().split("T")[0];
+    const endStr = endDate.toISOString().split("T")[0];
+
+    const base64Image = await fetchImageData(startStr, endStr, selectedType);
+    if (base64Image) {
+      openBase64Image(base64Image);
+    }
+  };
 
   return (
     <div>
-      <label>Selected Year: </label>
-      <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
-        <option value="all">All Years</option>
-        {years.map((year) => (
-          <option key={year} value={year}>{year}</option>
-        ))}
-      </select>
+      <div className="image-controls">
+        <div className="control-item">
+          <label>Data Type: </label>
+          <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
+            {dataTypes.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
 
-      <button onClick={fetchAndOpenImage}>Open Image</button>
+        <div className="control-item">
+          <label>Start Date: </label>
+          <DatePicker selected={startDate} onChange={setStartDate} dateFormat="yyyy-MM-dd" />
+        </div>
 
-      <table border="1" cellPadding="8">
-        <thead>
-          <tr>
-            <th className="sortable" onClick={() => handleSort("date")}>
-              Date
-              <span style={{ visibility: sortConfig.col === "date" ? "visible" : "hidden" }}>
-                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
-              </span>
-            </th>
-            <th className="sortable" onClick={() => handleSort("precipitation")}>
-              Precipitation
-              <span style={{ visibility: sortConfig.col === "precipitation" ? "visible" : "hidden" }}>
-                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
-              </span>
-            </th>
-            <th className="sortable" onClick={() => handleSort("temp_max")}>
-              Temp Max
-              <span style={{ visibility: sortConfig.col === "temp_max" ? "visible" : "hidden" }}>
-                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
-              </span>
-            </th>
-            <th className="sortable" onClick={() => handleSort("temp_min")}>
-              Temp Min
-              <span style={{ visibility: sortConfig.col === "temp_min" ? "visible" : "hidden" }}>
-                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
-              </span>
-            </th>
-            <th className="sortable" onClick={() => handleSort("wind")}>
-              Wind
-              <span style={{ visibility: sortConfig.col === "wind" ? "visible" : "hidden" }}>
-                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
-              </span>
-            </th>
-            <th className="sortable" onClick={() => handleSort("weather")}>
-              Weather
-              <span style={{ visibility: sortConfig.col === "weather" ? "visible" : "hidden" }}>
-                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
-              </span>
-            </th>
-          </tr>
-        </thead>
+        <div className="control-item">
+          <label>End Date: </label>
+          <DatePicker selected={endDate} onChange={setEndDate} dateFormat="yyyy-MM-dd" />
+        </div>
 
-        <tbody>
-          {sortedData.map((entry) => {
-            const weather = entry.WeatherInfo || entry;
-            return (
-              <tr key={weather.id}>
-                <td>{weather.date}</td>
-                <td>{weather.precipitation}</td>
-                <td>{weather.temp_max}</td>
-                <td>{weather.temp_min}</td>
-                <td>{weather.wind}</td>
-                <td>{weather.weather}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+        <div className="control-item">
+          <button className="view-chart-button" onClick={handleImageRequest}>
+            View Chart
+          </button>
+        </div>
+      </div>
+
+      <div className="table-layout">
+        <div className="year-filter">
+          <label htmlFor="year-select">Filter by Year:</label>
+          <select
+            id="year-select"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+          >
+            <option value="all">All Years</option>
+            {years.map((year) => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+
+
+        <div className="weather-table-wrapper">
+          <table border="1" cellPadding="8" style={{ marginTop: "1em" }}>
+          <thead>
+            <tr>
+              {["date", "precipitation", "temp_max", "temp_min", "wind", "weather"].map((col) => (
+                <th className="sortable" key={col} onClick={() => handleSort(col)} style={{ cursor: "pointer" }}>
+                  {col.charAt(0).toUpperCase() + col.slice(1)}
+                  {sortConfig.col === col ? (sortConfig.dir === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {getSortedData().map((entry) => {
+              const weather = entry.WeatherInfo || entry;
+              return (
+                <tr key={weather.id}>
+                  <td>{weather.date}</td>
+                  <td>{weather.precipitation}</td>
+                  <td>{weather.temp_max}</td>
+                  <td>{weather.temp_min}</td>
+                  <td>{weather.wind}</td>
+                  <td>{weather.weather}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        </div>
+      </div>
     </div>
   );
+}
+
+async function fetchData(url) {
+  try {
+    const response = await fetch(url, { mode: "cors" });
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
+    }
+    const json = await response.json();
+    return json;
+  } catch (error) {
+    console.error(error.message);
+    return [];
+  }
 }
 
 export default WeatherTable;
