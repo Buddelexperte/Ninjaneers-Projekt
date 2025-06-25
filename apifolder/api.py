@@ -1,6 +1,8 @@
 import io
 from datetime import date, timedelta, datetime
-import matplotlib.pyplot as max_temp_diagram
+from os import WCONTINUED
+
+import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from src.settings import Engine, WeatherInfo, Session
@@ -95,6 +97,81 @@ async def get_info(i_startDate : str, i_endDate : str):
 
     buffer = io.BytesIO()
     max_temp_diagram.savefig(buffer, format='png')
+    buffer.seek(0)
+
+    encoded_string = base64.b64encode(buffer.read()).decode('utf-8')
+
+    return {"image_base64": encoded_string}
+
+
+
+@app.get("/weather/timeframe/{i_startDate}/{i_endDate}/{type}")
+async def get_info(i_startDate : str, i_endDate : str, type : str):
+    startYear = i_startDate[0:4]
+    startMonth = i_startDate[5:7]
+    startDay = i_startDate[8:10]
+    startDate = date(int(startYear), int(startMonth), int(startDay))
+
+    endYear = i_endDate[0:4]
+    endMonth = i_endDate[5:7]
+    endDay = i_endDate[8:10]
+    endDate = date(int(endYear), int(endMonth), int(endDay))
+
+
+    check_type = False
+
+    def switch(type):
+        if type == "precipitation" :
+            check_type = True
+            return WeatherInfo.precipitation
+        elif type == "temp_max" :
+            check_type = True
+            return WeatherInfo.temp_max
+        elif type == "temp_min" :
+            check_type = True
+            return WeatherInfo.temp_min
+        elif type == "wind" :
+            check_type = True
+            print("Test for type" + type)
+            return WeatherInfo.wind
+
+    if not switch(type):
+        return {"message": "No data available for this type"}
+
+    days = []
+    values = []
+
+    universal_diagram.clf()
+    universal_diagram.title(type + " vom " + str(startDate) + " bis " + str(endDate))
+
+
+
+    current_date = startDate
+    index = 0
+
+    dataType = switch(type)
+
+    while current_date <= endDate:
+        days.append(current_date.strftime("%Y-%m-%d"))
+        #print("Test1")
+
+        with Session(Engine) as session:
+
+            stmt = select(dataType).where(WeatherInfo.date == current_date)
+            value = session.execute(stmt).mappings().first()
+            values.append(value[type])
+
+            index += 1
+            current_date += timedelta(days=1)
+
+
+    universal_diagram.bar(days, values)
+    universal_diagram.xticks(rotation=90)
+    universal_diagram.tight_layout()
+
+
+    buffer = io.BytesIO()
+    universal_diagram.savefig(buffer, format='png')
     buffer.seek(0)
 
     encoded_string = base64.b64encode(buffer.read()).decode('utf-8')
