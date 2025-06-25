@@ -1,5 +1,3 @@
-# Importing Engine and Session
-# Importing types
 from sqlalchemy import Table, Column, Integer, String, Date, Float, create_engine
 from sqlalchemy.orm import Session, declarative_base
 

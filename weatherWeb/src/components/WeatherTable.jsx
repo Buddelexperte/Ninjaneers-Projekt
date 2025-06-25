@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 async function getData() {
-  const url = "http://127.0.0.1:8000/weather";
+  const url = "http://127.0.0.1:8000/weather/all";
   try {
     const response = await fetch(url, { mode: "cors" });
 

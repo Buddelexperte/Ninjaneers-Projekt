@@ -9,7 +9,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # React adress
+    allow_origins=["http://localhost:5173"],
     allow_headers=["*"],
 )
 
@@ -18,7 +18,7 @@ app.add_middleware(
 async def root():
     return {"message": "Hello World"}
 
-@app.get("/weather")
+@app.get("/weather/all")
 async def get_info():
     text :str
     with Session(Engine) as session:
