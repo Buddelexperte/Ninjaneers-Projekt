@@ -101,3 +101,34 @@ async def get_info(i_startDate : str, i_endDate : str):
 
     return {"image_base64": encoded_string}
 
+
+@app.get("/weather/apexChartData")
+def chart_data(start: str, end: str):
+    start_date = date.fromisoformat(start)
+    end_date = date.fromisoformat(end)
+
+    days = []
+    temp_max = []
+    temp_min = []
+    wind = []
+
+    current = start_date
+    while current <= end_date:
+        with Session(Engine) as session:
+            stmt = select(WeatherInfo).where(WeatherInfo.date == current)
+            result = session.execute(stmt).scalars().first()
+
+            if result:
+                days.append(current.isoformat())
+                temp_max.append(result.temp_max)
+                temp_min.append(result.temp_min)
+                wind.append(result.wind)
+
+        current += timedelta(days=1)
+
+    return {
+        "dates": days,
+        "temp_max": temp_max,
+        "temp_min": temp_min,
+        "wind": wind
+    }

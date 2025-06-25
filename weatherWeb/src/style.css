@@ -13,3 +13,13 @@ th, td {
 h1 {
   text-align: center;
 }
+
+.sortable {
+  cursor: pointer;
+  display: compact;
+  align-items: center;
+  gap: 4px;
+}
+.sortable:hover{
+  text-decoration: underline;
+}

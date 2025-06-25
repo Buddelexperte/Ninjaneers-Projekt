@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from "react";
 
+const SortDirection = {
+  ASC: "asc",
+  DESC: "desc",
+};
+
 function openBase64Image(base64String) {
   // Create a new window or tab and write the image to it
   const image = new Image();
@@ -76,18 +81,15 @@ function WeatherTable() {
   const [data, setData] = useState([]);
   const [years, setYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState("all");
-  const [sortConfig, setSortConfig] = useState({ col: null, dir: "asc" });
+  const [sortConfig, setSortConfig] = useState({ col: "date", dir: SortDirection.ASC });
 
-
-  // Fetch years once
   useEffect(() => {
     (async () => {
       const yearOptions = await fetchAvailYears();
-      setYears(yearOptions.map(y => y.toString()));
+      setYears(yearOptions.map((y) => y.toString()));
     })();
   }, []);
 
-  // Fetch weather data when year changes
   useEffect(() => {
     (async () => {
       const result =
@@ -98,14 +100,47 @@ function WeatherTable() {
     })();
   }, [selectedYear]);
 
+  const handleSort = (col) => {
+    setSortConfig((prev) => {
+      if (prev.col === col) {
+        const newDir = prev.dir === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
+        return { col, dir: newDir };
+      }
+      return { col, dir: SortDirection.ASC };
+    });
+  };
+
+  const getSortedData = () => {
+    if (!sortConfig.col) return data;
+    const sorted = [...data].sort((a, b) => {
+      const rowA = a.WeatherInfo || a;
+      const rowB = b.WeatherInfo || b;
+      const valA = rowA[sortConfig.col];
+      const valB = rowB[sortConfig.col];
+
+      if (valA < valB) return sortConfig.dir === SortDirection.ASC ? -1 : 1;
+      if (valA > valB) return sortConfig.dir === SortDirection.ASC ? 1 : -1;
+
+      return 0;
+    });
+    return sorted;
+  };
+
+  const getArrow = (col) => {
+    if (sortConfig.col !== col) return "";
+    return sortConfig.dir === SortDirection.ASC ? " ▲" : " ▼";
+  };
+
+  const sortedData = getSortedData();
+
   return (
     <div>
-      <label>Select year: </label>
+      <label>Selected Year: </label>
       <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
         <option value="all">All Years</option>
-          {years.map((year) => (
-            <option key={year} value={year}>{year}</option>
-          ))}
+        {years.map((year) => (
+          <option key={year} value={year}>{year}</option>
+        ))}
       </select>
 
       <button onClick={fetchAndOpenImage}>Open Image</button>
@@ -113,16 +148,47 @@ function WeatherTable() {
       <table border="1" cellPadding="8">
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Precipitation</th>
-            <th>Temp Max</th>
-            <th>Temp Min</th>
-            <th>Wind</th>
-            <th>Weather</th>
+            <th className="sortable" onClick={() => handleSort("date")}>
+              Date
+              <span style={{ visibility: sortConfig.col === "date" ? "visible" : "hidden" }}>
+                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
+              </span>
+            </th>
+            <th className="sortable" onClick={() => handleSort("precipitation")}>
+              Precipitation
+              <span style={{ visibility: sortConfig.col === "precipitation" ? "visible" : "hidden" }}>
+                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
+              </span>
+            </th>
+            <th className="sortable" onClick={() => handleSort("temp_max")}>
+              Temp Max
+              <span style={{ visibility: sortConfig.col === "temp_max" ? "visible" : "hidden" }}>
+                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
+              </span>
+            </th>
+            <th className="sortable" onClick={() => handleSort("temp_min")}>
+              Temp Min
+              <span style={{ visibility: sortConfig.col === "temp_min" ? "visible" : "hidden" }}>
+                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
+              </span>
+            </th>
+            <th className="sortable" onClick={() => handleSort("wind")}>
+              Wind
+              <span style={{ visibility: sortConfig.col === "wind" ? "visible" : "hidden" }}>
+                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
+              </span>
+            </th>
+            <th className="sortable" onClick={() => handleSort("weather")}>
+              Weather
+              <span style={{ visibility: sortConfig.col === "weather" ? "visible" : "hidden" }}>
+                {sortConfig.dir === SortDirection.ASC ? "▲" : "▼"}
+              </span>
+            </th>
           </tr>
         </thead>
+
         <tbody>
-          {data.map((entry) => {
+          {sortedData.map((entry) => {
             const weather = entry.WeatherInfo || entry;
             return (
               <tr key={weather.id}>
@@ -140,6 +206,5 @@ function WeatherTable() {
     </div>
   );
 }
-
 
 export default WeatherTable;
