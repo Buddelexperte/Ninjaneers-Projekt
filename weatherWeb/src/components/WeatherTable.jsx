@@ -1,5 +1,37 @@
 import React, { useEffect, useState } from "react";
 
+function openBase64Image(base64String) {
+  // Create a new window or tab and write the image to it
+  const image = new Image();
+  image.src = `data:image/png;base64,${base64String}`;
+
+  const newTab = window.open();
+  if (newTab) {
+    newTab.document.body.innerHTML = "";
+    newTab.document.body.appendChild(image);
+  } else {
+    alert("Popup blocked! Please allow popups for this site.");
+  }
+}
+
+async function fetchAndOpenImage() {
+  const res = await fetch("http://localhost:8000/weather/timeframe/2022-02-05/2022-02-06");
+  const data = await res.json();  // ✅ Parse JSON
+  const base64String = data.image_base64;
+
+  // Then open image
+  const img = new Image();
+  img.src = `data:image/png;base64,${base64String}`;
+
+  const newTab = window.open();
+  if (newTab) {
+    newTab.document.body.innerHTML = "";
+    newTab.document.body.appendChild(img);
+  } else {
+    alert("Popup blocked! Please allow popups for this site.");
+  }
+}
+
 async function fetchAllData() {
   const url = "http://127.0.0.1:8000/weather/all";
   return fetchData(url);
@@ -76,6 +108,7 @@ function WeatherTable() {
           ))}
       </select>
 
+      <button onClick={fetchAndOpenImage}>Open Image</button>
 
       <table border="1" cellPadding="8">
         <thead>

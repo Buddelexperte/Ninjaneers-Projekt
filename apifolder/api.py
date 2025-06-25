@@ -1,3 +1,4 @@
+import io
 from datetime import date, timedelta, datetime
 import matplotlib.pyplot as max_temp_diagram
 from fastapi import FastAPI, APIRouter
@@ -59,6 +60,9 @@ async def get_info(i_startDate : str, i_endDate : str):
     endDay = i_endDate[8:10]
     endDate = date(int(endYear), int(endMonth), int(endDay))
 
+    # Clear old plot
+    max_temp_diagram.clf()
+
     days = []
     temps = []
 
@@ -89,12 +93,11 @@ async def get_info(i_startDate : str, i_endDate : str):
 
     max_temp_diagram.tight_layout()
 
+    buffer = io.BytesIO()
+    max_temp_diagram.savefig(buffer, format='png')
+    buffer.seek(0)
 
-    now = datetime.now()
-    max_temp_diagram.savefig('images/' + str(now) + '.png')
+    encoded_string = base64.b64encode(buffer.read()).decode('utf-8')
 
-
-    with open("images/" + str(now) + ".png", "rb") as img_file:
-        encoded_string = base64.b64encode(img_file.read()).decode('utf-8')
-    return {"filename": str(now) + ".png", "image_base64": f"data:image/png;base64,{encoded_string}"}
+    return {"image_base64": encoded_string}
 
