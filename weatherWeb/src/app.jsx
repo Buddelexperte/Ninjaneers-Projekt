@@ -1,13 +1,12 @@
 import React from "react";
-import WeatherTable from "./components/WeatherTable.jsx";
+import WeatherDashboard from "./components/WeatherDashboard";
 
-function App()
-{
+function App() {
   return (
-    <>
-      <h1>Wetterdaten</h1>
-      <WeatherTable />
-    </>
+    <div>
+      <h1>Weather Data</h1>
+      <WeatherDashboard />
+    </div>
   );
 }
 

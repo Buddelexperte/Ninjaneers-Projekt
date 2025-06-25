@@ -1,7 +1,5 @@
 import io
 from datetime import date, timedelta, datetime
-from os import WCONTINUED
-
 import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
