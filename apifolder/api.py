@@ -6,8 +6,9 @@ import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from src.settings import Engine, WeatherInfo, Session
-from sqlalchemy import select, extract
+from sqlalchemy import select, extract, RowMapping
 import base64
+import numpy as np
 
 
 router = APIRouter()
@@ -117,24 +118,31 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
     endDay = i_endDate[8:10]
     endDate = date(int(endYear), int(endMonth), int(endDay))
 
-
-    check_type = False
-
-    def switch(type):
-        if type == "precipitation" :
-            check_type = True
+    def switch_data(type):
+        if type == "precipitation":
             return WeatherInfo.precipitation
-        elif type == "temp_max" :
-            check_type = True
+        elif type == "temp_max":
             return WeatherInfo.temp_max
-        elif type == "temp_min" :
-            check_type = True
+        elif type == "temp_min":
             return WeatherInfo.temp_min
-        elif type == "wind" :
-            check_type = True
+        elif type == "wind":
             return WeatherInfo.wind
+        else:
+            return None
 
-    if not switch(type):
+    def switch_label(type: str):
+        if type == "precipitation":
+            return "Niederschlag in mm"
+        elif type == "temp_max":
+            return "Temperatur in Grad"
+        elif type == "temp_min":
+            return "Temperatur in Grad"
+        elif type == "wind":
+            return "Wind in km/h"
+        else:
+            return None
+
+    if not switch_data(type):
         return {"message": "No data available for this type"}
 
     days = []
@@ -143,12 +151,15 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
     universal_diagram.clf()
     universal_diagram.title(type + " vom " + str(startDate) + " bis " + str(endDate))
 
-
-
-    current_date = startDate
+    highest_value = float('-inf')
+    highest_index = -1
+    lowest_value = float('inf')
+    lowest_index = -1
     index = 0
 
-    dataType = switch(type)
+    current_date = startDate
+    dataType = switch_data(type)
+
 
     while current_date <= endDate:
         days.append(current_date.strftime("%Y-%m-%d"))
@@ -158,15 +169,32 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
 
             stmt = select(dataType).where(WeatherInfo.date == current_date)
             value = session.execute(stmt).mappings().first()
-            values.append(value[type])
+            actual_value = value[type]
+
+            values.append(actual_value)
+
+            if actual_value >= highest_value:
+                highest_value = actual_value
+                highest_index = index
+            if actual_value <= lowest_value:
+                lowest_value = actual_value
+                lowest_index = index
 
             index += 1
             current_date += timedelta(days=1)
 
+    colors = ['blue'] * index
+    colors[highest_index] = "red"
+    colors[lowest_index] = "red"
 
-    universal_diagram.bar(days, values)
+    universal_diagram.bar(days, values, color=colors)
+    universal_diagram.axhline(np.mean(values), color='black')
     universal_diagram.xticks(rotation=90)
     universal_diagram.tight_layout()
+
+    universal_diagram.xlabel('Tage')
+    universal_diagram.ylabel(switch_label(type))
+
 
 
     buffer = io.BytesIO()
