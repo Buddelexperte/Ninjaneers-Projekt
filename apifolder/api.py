@@ -132,7 +132,6 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
             return WeatherInfo.temp_min
         elif type == "wind" :
             check_type = True
-            print("Test for type" + type)
             return WeatherInfo.wind
 
     if not switch(type):
