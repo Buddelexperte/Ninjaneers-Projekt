@@ -9,6 +9,7 @@ from src.settings import Engine, WeatherInfo, Session
 from sqlalchemy import select, extract, RowMapping
 import base64
 import numpy as np
+import io
 
 
 router = APIRouter()
@@ -51,61 +52,6 @@ async def get_info(year: int):
     return res
 
 
-@app.get("/weather/timeframe/{i_startDate}/{i_endDate}")
-async def get_info(i_startDate : str, i_endDate : str):
-    startYear = i_startDate[0:4]
-    startMonth = i_startDate[5:7]
-    startDay = i_startDate[8:10]
-    startDate = date(int(startYear), int(startMonth), int(startDay))
-
-    endYear = i_endDate[0:4]
-    endMonth = i_endDate[5:7]
-    endDay = i_endDate[8:10]
-    endDate = date(int(endYear), int(endMonth), int(endDay))
-
-    # Clear old plot
-    max_temp_diagram.clf()
-
-    days = []
-    temps = []
-
-    current_date = startDate
-    index = 0
-
-
-    while current_date <= endDate:
-        days.append(current_date.strftime("%Y-%m-%d"))
-        #print("Test1")
-
-        with Session(Engine) as session:
-            stmt = select(WeatherInfo.temp_max).where(WeatherInfo.date == current_date)
-            maximum_temp = session.execute(stmt).mappings().first()
-            temps.append(maximum_temp['temp_max'])
-
-            index += 1
-            #print(maximum_temp)
-            current_date += timedelta(days=1)
-
-    max_temp_diagram.bar(days, temps)
-    max_temp_diagram.title("Maximale Temperatur vom " + str(startDate) + " bis zum " + str(endDate))
-
-    max_temp_diagram.xlabel('Tage')
-    max_temp_diagram.ylabel('Temperatur in Grad')
-
-    max_temp_diagram.xticks(rotation=90)
-
-    max_temp_diagram.tight_layout()
-
-    buffer = io.BytesIO()
-    max_temp_diagram.savefig(buffer, format='png')
-    buffer.seek(0)
-
-    encoded_string = base64.b64encode(buffer.read()).decode('utf-8')
-
-    return {"image_base64": encoded_string}
-
-
-
 @app.get("/weather/timeframe/{i_startDate}/{i_endDate}/{type}")
 async def get_info(i_startDate : str, i_endDate : str, type : str):
     startYear = i_startDate[0:4]
@@ -144,6 +90,8 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
 
     if not switch_data(type):
         return {"message": "No data available for this type"}
+
+    universal_diagram.figure(figsize = (16,9),dpi = 200)
 
     days = []
     values = []
@@ -190,12 +138,12 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
     universal_diagram.bar(days, values, color=colors)
     universal_diagram.axhline(np.mean(values), color='black')
     universal_diagram.xticks(rotation=90)
-    universal_diagram.tight_layout()
+
 
     universal_diagram.xlabel('Tage')
     universal_diagram.ylabel(switch_label(type))
 
-
+    universal_diagram.tight_layout()
 
     buffer = io.BytesIO()
     universal_diagram.savefig(buffer, format='png')
