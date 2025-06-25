@@ -7,6 +7,7 @@ from src.settings import Engine, WeatherInfo, Session
 from sqlalchemy import select, extract, RowMapping
 import base64
 import numpy as np
+import io
 
 
 router = APIRouter()
@@ -88,6 +89,8 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
     if not switch_data(type):
         return {"message": "No data available for this type"}
 
+    universal_diagram.figure(figsize = (16,9),dpi = 200)
+
     days = []
     values = []
 
@@ -133,12 +136,12 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
     universal_diagram.bar(days, values, color=colors)
     universal_diagram.axhline(np.mean(values), color='black')
     universal_diagram.xticks(rotation=90)
-    universal_diagram.tight_layout()
+
 
     universal_diagram.xlabel('Tage')
     universal_diagram.ylabel(switch_label(type))
 
-
+    universal_diagram.tight_layout()
 
     buffer = io.BytesIO()
     universal_diagram.savefig(buffer, format='png')
