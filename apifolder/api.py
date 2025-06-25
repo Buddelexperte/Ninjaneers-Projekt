@@ -1,11 +1,12 @@
 import io
 from datetime import date, timedelta, datetime
-import matplotlib.pyplot as max_temp_diagram
+import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from src.settings import Engine, WeatherInfo, Session
-from sqlalchemy import select, extract
+from sqlalchemy import select, extract, RowMapping
 import base64
+import numpy as np
 
 
 router = APIRouter()
@@ -48,8 +49,8 @@ async def get_info(year: int):
     return res
 
 
-@app.get("/weather/timeframe/{i_startDate}/{i_endDate}")
-async def get_info(i_startDate : str, i_endDate : str):
+@app.get("/weather/timeframe/{i_startDate}/{i_endDate}/{type}")
+async def get_info(i_startDate : str, i_endDate : str, type : str):
     startYear = i_startDate[0:4]
     startMonth = i_startDate[5:7]
     startDay = i_startDate[8:10]
@@ -60,14 +61,47 @@ async def get_info(i_startDate : str, i_endDate : str):
     endDay = i_endDate[8:10]
     endDate = date(int(endYear), int(endMonth), int(endDay))
 
-    # Clear old plot
-    max_temp_diagram.clf()
+    def switch_data(type):
+        if type == "precipitation":
+            return WeatherInfo.precipitation
+        elif type == "temp_max":
+            return WeatherInfo.temp_max
+        elif type == "temp_min":
+            return WeatherInfo.temp_min
+        elif type == "wind":
+            return WeatherInfo.wind
+        else:
+            return None
+
+    def switch_label(type: str):
+        if type == "precipitation":
+            return "Niederschlag in mm"
+        elif type == "temp_max":
+            return "Temperatur in Grad"
+        elif type == "temp_min":
+            return "Temperatur in Grad"
+        elif type == "wind":
+            return "Wind in km/h"
+        else:
+            return None
+
+    if not switch_data(type):
+        return {"message": "No data available for this type"}
 
     days = []
-    temps = []
+    values = []
+
+    universal_diagram.clf()
+    universal_diagram.title(type + " vom " + str(startDate) + " bis " + str(endDate))
+
+    highest_value = float('-inf')
+    highest_index = -1
+    lowest_value = float('inf')
+    lowest_index = -1
+    index = 0
 
     current_date = startDate
-    index = 0
+    dataType = switch_data(type)
 
 
     while current_date <= endDate:
@@ -75,60 +109,42 @@ async def get_info(i_startDate : str, i_endDate : str):
         #print("Test1")
 
         with Session(Engine) as session:
-            stmt = select(WeatherInfo.temp_max).where(WeatherInfo.date == current_date)
-            maximum_temp = session.execute(stmt).mappings().first()
-            temps.append(maximum_temp['temp_max'])
+
+            stmt = select(dataType).where(WeatherInfo.date == current_date)
+            value = session.execute(stmt).mappings().first()
+            actual_value = value[type]
+
+            values.append(actual_value)
+
+            if actual_value >= highest_value:
+                highest_value = actual_value
+                highest_index = index
+            if actual_value <= lowest_value:
+                lowest_value = actual_value
+                lowest_index = index
 
             index += 1
-            #print(maximum_temp)
             current_date += timedelta(days=1)
 
-    max_temp_diagram.bar(days, temps)
-    max_temp_diagram.title("Maximale Temperatur vom " + str(startDate) + " bis zum " + str(endDate))
+    colors = ['blue'] * index
+    colors[highest_index] = "red"
+    colors[lowest_index] = "red"
 
-    max_temp_diagram.xlabel('Tage')
-    max_temp_diagram.ylabel('Temperatur in Grad')
+    universal_diagram.bar(days, values, color=colors)
+    universal_diagram.axhline(np.mean(values), color='black')
+    universal_diagram.xticks(rotation=90)
+    universal_diagram.tight_layout()
 
-    max_temp_diagram.xticks(rotation=90)
+    universal_diagram.xlabel('Tage')
+    universal_diagram.ylabel(switch_label(type))
 
-    max_temp_diagram.tight_layout()
+
 
     buffer = io.BytesIO()
-    max_temp_diagram.savefig(buffer, format='png')
+    universal_diagram.savefig(buffer, format='png')
     buffer.seek(0)
 
     encoded_string = base64.b64encode(buffer.read()).decode('utf-8')
 
     return {"image_base64": encoded_string}
 
-
-@app.get("/weather/apexChartData")
-def chart_data(start: str, end: str):
-    start_date = date.fromisoformat(start)
-    end_date = date.fromisoformat(end)
-
-    days = []
-    temp_max = []
-    temp_min = []
-    wind = []
-
-    current = start_date
-    while current <= end_date:
-        with Session(Engine) as session:
-            stmt = select(WeatherInfo).where(WeatherInfo.date == current)
-            result = session.execute(stmt).scalars().first()
-
-            if result:
-                days.append(current.isoformat())
-                temp_max.append(result.temp_max)
-                temp_min.append(result.temp_min)
-                wind.append(result.wind)
-
-        current += timedelta(days=1)
-
-    return {
-        "dates": days,
-        "temp_max": temp_max,
-        "temp_min": temp_min,
-        "wind": wind
-    }
