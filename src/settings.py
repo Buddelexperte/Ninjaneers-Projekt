@@ -3,8 +3,6 @@ from sqlalchemy.orm import Session, declarative_base
 
 url = "mysql+pymysql://root:password@localhost:3306/weather_data"
 Engine = create_engine(url, echo=True)
-
-
 session = Session(Engine)
 
 Base = declarative_base()
