@@ -43,8 +43,7 @@ function WeatherTable() {
   const [selectedYear, setSelectedYear] = useState("all");
   const [sortConfig, setSortConfig] = useState({ col: "date", dir: "asc" });
 
-  // UI state for image generation
-  const [selectedType, setSelectedType] = useState(null);
+  const [selectedType, setSelectedType] = useState(dataTypes[0]);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
@@ -76,7 +75,7 @@ function WeatherTable() {
   };
 
   const getSortedData = () => {
-    const sorted = [...data].sort((a, b) => {
+    return [...data].sort((a, b) => {
       const rowA = a.WeatherInfo || a;
       const rowB = b.WeatherInfo || b;
       const valA = rowA[sortConfig.col];
@@ -85,7 +84,6 @@ function WeatherTable() {
       if (valA > valB) return sortConfig.dir === "asc" ? 1 : -1;
       return 0;
     });
-    return sorted;
   };
 
   const handleImageRequest = async () => {
@@ -98,17 +96,15 @@ function WeatherTable() {
     const endStr = endDate.toISOString().split("T")[0];
 
     const base64Image = await fetchImageData(startStr, endStr, selectedType);
-    if (base64Image) {
-      openBase64Image(base64Image);
-    }
+    if (base64Image) openBase64Image(base64Image);
   };
 
   return (
-    <div>
+    <div className="main-container">
       <div className="image-controls">
         <div className="control-item">
-          <label>Data Type: </label>
-          <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
+          <label className="input-label">Data Type:</label>
+          <select className="dropdown" value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
             {dataTypes.map((type) => (
               <option key={type} value={type}>{type}</option>
             ))}
@@ -116,30 +112,26 @@ function WeatherTable() {
         </div>
 
         <div className="control-item">
-          <label>Start Date: </label>
-          <DatePicker selected={startDate} onChange={setStartDate} dateFormat="yyyy-MM-dd" />
+          <label className="input-label">Start Date:</label>
+          <DatePicker className="datepicker" selected={startDate} onChange={setStartDate} dateFormat="yyyy-MM-dd" />
         </div>
 
         <div className="control-item">
-          <label>End Date: </label>
-          <DatePicker selected={endDate} onChange={setEndDate} dateFormat="yyyy-MM-dd" />
+          <label className="input-label">End Date:</label>
+          <DatePicker className="datepicker" selected={endDate} onChange={setEndDate} dateFormat="yyyy-MM-dd" />
         </div>
 
         <div className="control-item">
-          <button className="view-chart-button" onClick={handleImageRequest}>
-            View Chart
+          <button className="standalone-btn" onClick={handleImageRequest}>
+            Open Chart
           </button>
         </div>
       </div>
 
       <div className="table-layout">
         <div className="year-filter">
-          <label htmlFor="year-select">Filter by Year:</label>
-          <select
-            id="year-select"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-          >
+          <label className="input-label">Filter by Year:</label>
+          <select className="dropdown" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
             <option value="all">All Years</option>
             {years.map((year) => (
               <option key={year} value={year}>{year}</option>
@@ -147,40 +139,40 @@ function WeatherTable() {
           </select>
         </div>
 
-
         <div className="weather-table-wrapper">
-          <table border="1" cellPadding="8" style={{ marginTop: "1em" }}>
-          <thead>
-            <tr>
-              {["date", "precipitation", "temp_max", "temp_min", "wind", "weather"].map((col) => (
-                <th className="sortable" key={col} onClick={() => handleSort(col)} style={{ cursor: "pointer" }}>
-                  {col.charAt(0).toUpperCase() + col.slice(1)}
-                  {sortConfig.col === col ? (sortConfig.dir === "asc" ? " ▲" : " ▼") : ""}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {getSortedData().map((entry) => {
-              const weather = entry.WeatherInfo || entry;
-              return (
-                <tr key={weather.id}>
-                  <td>{weather.date}</td>
-                  <td>{weather.precipitation}</td>
-                  <td>{weather.temp_max}</td>
-                  <td>{weather.temp_min}</td>
-                  <td>{weather.wind}</td>
-                  <td>{weather.weather}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+          <table className="weather-table">
+            <thead>
+              <tr>
+                {["date", "precipitation", "temp_max", "temp_min", "wind", "weather"].map((col) => (
+                  <th key={col} className="sortable" onClick={() => handleSort(col)}>
+                    {col.charAt(0).toUpperCase() + col.slice(1)}
+                    {sortConfig.col === col ? (sortConfig.dir === "asc" ? " ▲" : " ▼") : ""}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {getSortedData().map((entry) => {
+                const weather = entry.WeatherInfo || entry;
+                return (
+                  <tr key={weather.id}>
+                    <td>{weather.date}</td>
+                    <td>{weather.precipitation}</td>
+                    <td>{weather.temp_max}</td>
+                    <td>{weather.temp_min}</td>
+                    <td>{weather.wind}</td>
+                    <td>{weather.weather}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   );
 }
+
 
 async function fetchData(url) {
   try {
@@ -188,8 +180,7 @@ async function fetchData(url) {
     if (!response.ok) {
       throw new Error(`Response status: ${response.status}`);
     }
-    const json = await response.json();
-    return json;
+    return await response.json();
   } catch (error) {
     console.error(error.message);
     return [];

@@ -7,10 +7,13 @@ function WeatherDashboard() {
 
   return (
     <div>
-      <button onClick={() => setViewMode(viewMode === "table" ? "chart" : "table")}>
-        Switch to {viewMode === "table" ? "Chart" : "Table"} View
-      </button>
-
+        <div className="dashboard">
+            <div className="view-switch-div">
+              <button className="standalone-btn" onClick={() => setViewMode(viewMode === "table" ? "chart" : "table")}>
+                Switch to {viewMode === "table" ? "Chart" : "Table"} View
+              </button>
+            </div>
+        </div>
       {viewMode === "table" ? <WeatherTable /> : <WeatherChart />}
     </div>
   );
