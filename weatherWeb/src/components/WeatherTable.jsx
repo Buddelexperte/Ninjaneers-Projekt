@@ -2,39 +2,37 @@ import React, { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-const dataTypes = [
-  "precipitation",
-  "temp_max",
-  "temp_min",
-  "wind",
-  "weather"
-];
+const DATA_TYPES = ["precipitation", "temp_max", "temp_min", "wind", "weather"];
+
+const COL_NAMES = ["Precipitation", "Max Temp", "Min Temp", "Wind", "Weather"];
 
 function openBase64Image(base64String) {
-  const image = new Image();
-  image.src = `data:image/png;base64,${base64String}`;
-  const newTab = window.open();
-  if (newTab) {
-    newTab.document.body.innerHTML = "";
-    newTab.document.body.appendChild(image);
+  const img = new Image();
+  img.src = `data:image/png;base64,${base64String}`;
+  const tab = window.open();
+  if (tab) {
+    tab.document.body.innerHTML = "";
+    tab.document.body.appendChild(img);
   } else {
-    alert("Popup blocked! Please allow popups for this site.");
+    alert("Popup blocked! Please allow popups.");
+  }
+}
+
+async function fetchJSON(url) {
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("Fetch error:", err.message);
+    return [];
   }
 }
 
 async function fetchImageData(startDate, endDate, dataType) {
   const url = `http://localhost:8000/weather/timeframe/${startDate}/${endDate}/${dataType}`;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Server error: ${res.status}`);
-    }
-    const data = await res.json();
-    return data.image_base64;
-  } catch (error) {
-    console.error("Image fetch failed:", error.message);
-    return null;
-  }
+  const res = await fetchJSON(url);
+  return res?.image_base64 || null;
 }
 
 function WeatherTable() {
@@ -43,38 +41,31 @@ function WeatherTable() {
   const [selectedYear, setSelectedYear] = useState("all");
   const [sortConfig, setSortConfig] = useState({ col: "date", dir: "asc" });
 
-  const [selectedType, setSelectedType] = useState(dataTypes[0]);
+  const [selectedType, setSelectedType] = useState(DATA_TYPES[0]);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
   useEffect(() => {
-    (async () => {
-      const res = await fetch("http://127.0.0.1:8000/weather/years/all");
-      const rawYears = await res.json();
-      setYears(rawYears.map((y) => y.toString()));
-    })();
+    fetchJSON("http://127.0.0.1:8000/weather/years/all").then((res) =>
+      setYears(res.map(String))
+    );
   }, []);
 
   useEffect(() => {
-    (async () => {
-      const url =
-        selectedYear === "all"
-          ? "http://127.0.0.1:8000/weather/all"
-          : `http://127.0.0.1:8000/weather/year/${selectedYear}`;
-      const result = await fetchData(url);
-      setData(result);
-    })();
+    const url =
+      selectedYear === "all"
+        ? "http://127.0.0.1:8000/weather/all"
+        : `http://127.0.0.1:8000/weather/year/${selectedYear}`;
+    fetchJSON(url).then(setData);
   }, [selectedYear]);
 
   const handleSort = (col) => {
     setSortConfig((prev) =>
-      prev.col === col
-        ? { col, dir: prev.dir === "asc" ? "desc" : "asc" }
-        : { col, dir: "asc" }
+      prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" }
     );
   };
 
-  const getSortedData = () => {
+  const sortedData = () => {
     return [...data].sort((a, b) => {
       const rowA = a.WeatherInfo || a;
       const rowB = b.WeatherInfo || b;
@@ -88,44 +79,36 @@ function WeatherTable() {
 
   const handleImageRequest = async () => {
     if (!startDate || !endDate || !selectedType) {
-      alert("Please select a start date, end date, and data type.");
-      return;
+      return alert("Please select all inputs.");
     }
-
     const startStr = startDate.toISOString().split("T")[0];
     const endStr = endDate.toISOString().split("T")[0];
-
-    const base64Image = await fetchImageData(startStr, endStr, selectedType);
-    if (base64Image) openBase64Image(base64Image);
+    const base64 = await fetchImageData(startStr, endStr, selectedType);
+    if (base64) openBase64Image(base64);
   };
 
   return (
     <div className="main-container">
       <div className="image-controls">
-        <div className="control-item">
-          <label className="input-label">Data Type:</label>
+        <Control label="Data Type:">
           <select className="dropdown" value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
-            {dataTypes.map((type) => (
+            {DATA_TYPES.map((type) => (
               <option key={type} value={type}>{type}</option>
             ))}
           </select>
-        </div>
+        </Control>
 
-        <div className="control-item">
-          <label className="input-label">Start Date:</label>
+        <Control label="Start Date:">
           <DatePicker className="datepicker" selected={startDate} onChange={setStartDate} dateFormat="yyyy-MM-dd" />
-        </div>
+        </Control>
 
-        <div className="control-item">
-          <label className="input-label">End Date:</label>
+        <Control label="End Date:">
           <DatePicker className="datepicker" selected={endDate} onChange={setEndDate} dateFormat="yyyy-MM-dd" />
-        </div>
+        </Control>
 
-        <div className="control-item">
-          <button className="standalone-btn" onClick={handleImageRequest}>
-            Open Chart
-          </button>
-        </div>
+        <Control>
+          <button className="standalone-btn" onClick={handleImageRequest}>Open Chart</button>
+        </Control>
       </div>
 
       <div className="table-layout">
@@ -138,53 +121,49 @@ function WeatherTable() {
             ))}
           </select>
         </div>
-
-        <div className="weather-table-wrapper">
-          <table className="weather-table">
-            <thead>
-              <tr>
-                {["date", "precipitation", "temp_max", "temp_min", "wind", "weather"].map((col) => (
-                  <th key={col} className="sortable" onClick={() => handleSort(col)}>
-                    {col.charAt(0).toUpperCase() + col.slice(1)}
-                    {sortConfig.col === col ? (sortConfig.dir === "asc" ? " ▲" : " ▼") : ""}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {getSortedData().map((entry) => {
-                const weather = entry.WeatherInfo || entry;
-                return (
-                  <tr key={weather.id}>
-                    <td>{weather.date}</td>
-                    <td>{weather.precipitation}</td>
-                    <td>{weather.temp_max}</td>
-                    <td>{weather.temp_min}</td>
-                    <td>{weather.wind}</td>
-                    <td>{weather.weather}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="sticky-wrapper">
+          <div className="weather-table-wrapper">
+            <table className="weather-table">
+              <thead>
+                <tr>
+                  {["date", ...COL_NAMES].map((col) => (
+                    <th key={col} className="sortable" onClick={() => handleSort(col)}>
+                      {col.charAt(0).toUpperCase() + col.slice(1)}
+                      {sortConfig.col === col ? (sortConfig.dir === "asc" ? " ▲" : " ▼") : ""}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedData().map((entry) => {
+                  const row = entry.WeatherInfo || entry;
+                  return (
+                    <tr className="table-body-row" key={row.id}>
+                      <td>{row.date}</td>
+                      <td>{row.precipitation}</td>
+                      <td>{row.temp_max}</td>
+                      <td>{row.temp_min}</td>
+                      <td>{row.wind}</td>
+                      <td>{row.weather}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-
-async function fetchData(url) {
-  try {
-    const response = await fetch(url, { mode: "cors" });
-    if (!response.ok) {
-      throw new Error(`Response status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error(error.message);
-    return [];
-  }
+function Control({ label, children }) {
+  return (
+    <div className="control-item">
+      {label && <label className="input-label">{label}</label>}
+      {children}
+    </div>
+  );
 }
 
 export default WeatherTable;
