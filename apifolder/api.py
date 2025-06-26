@@ -95,7 +95,7 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
     if not switch_data(type):
         return {"message": "No data available for this type"}
 
-    universal_diagram.figure(figsize = (16,9),dpi = 200)
+    universal_diagram.figure(figsize = (6,4),dpi = 200)
 
     days = []
     values = []
