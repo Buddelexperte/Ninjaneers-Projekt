@@ -3,11 +3,14 @@ from datetime import date, timedelta, datetime
 import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from matplotlib.pyplot import subplot
+
 from src.settings import Engine, WeatherInfo, Session
 from sqlalchemy import select, extract, RowMapping
 import base64
 import numpy as np
 import io
+from sklearn.linear_model import LinearRegression
 
 
 router = APIRouter()
@@ -19,6 +22,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+def switch_data(type):
+    if type == "precipitation":
+        return WeatherInfo.precipitation
+    elif type == "temp_max":
+        return WeatherInfo.temp_max
+    elif type == "temp_min":
+        return WeatherInfo.temp_min
+    elif type == "wind":
+        return WeatherInfo.wind
+    else:
+        return None
+
+
+def switch_label(type: str):
+    if type == "precipitation":
+        return "Niederschlag in mm"
+    elif type == "temp_max":
+        return "Temperatur in Grad"
+    elif type == "temp_min":
+        return "Temperatur in Grad"
+    elif type == "wind":
+        return "Wind in km/h"
+    else:
+        return None
 
 @app.get("/")
 async def root():
@@ -62,29 +90,7 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
     endDay = i_endDate[8:10]
     endDate = date(int(endYear), int(endMonth), int(endDay))
 
-    def switch_data(type):
-        if type == "precipitation":
-            return WeatherInfo.precipitation
-        elif type == "temp_max":
-            return WeatherInfo.temp_max
-        elif type == "temp_min":
-            return WeatherInfo.temp_min
-        elif type == "wind":
-            return WeatherInfo.wind
-        else:
-            return None
 
-    def switch_label(type: str):
-        if type == "precipitation":
-            return "Niederschlag in mm"
-        elif type == "temp_max":
-            return "Temperatur in Grad"
-        elif type == "temp_min":
-            return "Temperatur in Grad"
-        elif type == "wind":
-            return "Wind in km/h"
-        else:
-            return None
 
     if not switch_data(type):
         return {"message": "No data available for this type"}
@@ -150,4 +156,95 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
     encoded_string = base64.b64encode(buffer.read()).decode('utf-8')
 
     return {"image_base64": encoded_string}
+
+
+@app.get("/weather/predict/{target_date}/{independent_type}/{dependent_type}")
+async def get_prediction(target_date: str, independent_type: str, dependent_type: str):
+    year, month, day = map(int, target_date.split("-"))
+    predict_date = date(year, month, day)
+    start_date = predict_date - timedelta(days=10)
+
+    independent_values = [] # Maximale Temp
+    dependent_values = [] # minimale Temp
+    days = []
+    current_date = start_date
+
+    while current_date < predict_date:
+        days.append(current_date.strftime("%Y-%m-%d"))
+        with Session(Engine) as session:
+            # Min
+            stmt_ind = select(switch_data(independent_type)).where(WeatherInfo.date == current_date)
+            row_ind = session.execute(stmt_ind).mappings().first()
+            if row_ind is None:
+                return {"error": f"Keine Daten für {current_date} (independent)"}
+            independent_values.append(row_ind[independent_type])
+
+            # Max
+            stmt_dep = select(switch_data(dependent_type)).where(WeatherInfo.date == current_date)
+            row_dep = session.execute(stmt_dep).mappings().first()
+            if row_dep is None:
+                return {"error": f"Keine Daten für {current_date} (dependent)"}
+            dependent_values.append(row_dep[dependent_type])
+
+        current_date += timedelta(days=1)
+
+    if len(independent_values) < 10 or len(dependent_values) < 10:
+        return {"error": "Nicht genügend Daten für Prediction"}
+
+    input_prediction = []
+    for i in range(10):
+        input_prediction.append(independent_values[i])
+        input_prediction.append(dependent_values[i])
+
+    diagram_values_x = np.array([independent_values])
+    diagram_values_y = np.array([dependent_values])
+
+
+
+
+    X_train = np.array([input_prediction])
+    y_min = [np.mean(independent_values)]
+    y_max = [np.mean(dependent_values)]
+
+    #Train modell
+    reg_min = LinearRegression().fit(X_train, y_min)
+    reg_max = LinearRegression().fit(X_train, y_max)
+
+    #prediction
+    x_predict = np.array(input_prediction).reshape(1, -1)
+    pred_min = float(reg_min.predict(x_predict)[0])
+    pred_max = float(reg_max.predict(x_predict)[0])
+
+    if pred_min > pred_max:
+        pred_min, pred_max = pred_max, pred_min
+
+    fig, forecast_diagram = universal_diagram.subplots()
+
+
+    dependent_values.append(pred_min)
+    independent_values.append(pred_max)
+    days.append("Prediction for: " + str(current_date))
+
+
+    length = len(days)
+    colors_min = ['lightblue'] * (length - 1) + ['blue']
+    colors_max = ['orange'] * (length - 1) + ['red']
+
+    forecast_diagram.bar(days,dependent_values, color=colors_min)
+    forecast_diagram.bar(days, independent_values, bottom=dependent_values, color=colors_max)
+
+    #fig.set_xlabel('Tage')
+    #fig.set_ylabel('Temperator in °')
+    forecast_diagram.tick_params(axis='x', rotation=90)
+    fig.tight_layout()
+
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png')
+    buffer.seek(0)
+
+    encoded_string = base64.b64encode(buffer.read()).decode('utf-8')
+
+    return {"image_base64": encoded_string}
+
+    #return { "Min:" : pred_min, "Max:" : pred_max }
 
