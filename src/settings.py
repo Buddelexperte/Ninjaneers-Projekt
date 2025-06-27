@@ -1,5 +1,7 @@
 from sqlalchemy import Table, Column, Integer, String, Date, Float, create_engine
 from sqlalchemy.orm import Session, declarative_base
+from pydantic import BaseModel
+from datetime import date
 
 url = "mysql+pymysql://root:password@localhost:3306/weather_data"
 Engine = create_engine(url, echo=True)
@@ -18,4 +20,15 @@ class WeatherInfo (Base) :
     wind = Column(Float)
     weather= Column(String(10))
 
+#Schema wie die json aussehen muss
+class WeatherCreate(BaseModel):
+    i_date: date
+    i_precipitation : float
+    i_temp_max: float
+    i_temp_min: float
+    i_wind: float
+    i_weather: str
+
+
 Base.metadata.create_all(Engine)
+

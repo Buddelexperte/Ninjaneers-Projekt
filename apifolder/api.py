@@ -4,13 +4,15 @@ import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from matplotlib.pyplot import subplot
+from sqlalchemy.dialects.mysql import insert
 
-from src.settings import Engine, WeatherInfo, Session
-from sqlalchemy import select, extract, RowMapping
+from src.settings import Engine, WeatherInfo, Session, WeatherCreate
+from sqlalchemy import select, extract, RowMapping, update, delete
 import base64
 import numpy as np
 import io
 from sklearn.linear_model import LinearRegression
+import requests
 
 
 router = APIRouter()
@@ -47,6 +49,30 @@ def switch_label(type: str):
         return "Wind in km/h"
     else:
         return None
+
+def updateData(data : WeatherCreate):
+
+    with Session(Engine) as session:
+
+
+        stmt = (update(WeatherInfo).where(WeatherInfo.date == data.i_date).values(
+            precipitation=data.i_precipitation,
+            temp_max=data.i_temp_max,
+            temp_min=data.i_temp_min,
+            wind=data.i_wind,
+            weather=data.i_weather)
+        )
+
+
+
+
+
+        session.execute(stmt)
+        session.commit()
+
+        return True
+    return False
+
 
 @app.get("/")
 async def root():
@@ -250,4 +276,54 @@ async def get_prediction(target_date: str,):
     return {"image_base64": encoded_string}
 
     #return { "Min:" : pred_min, "Max:" : pred_max }
+
+@app.post("/weather/addEntry")
+async def add_entry(entry : WeatherCreate):
+
+    with Session(Engine) as session:
+        stmt = select(WeatherInfo).where(WeatherInfo.date == entry.i_date)
+        result = session.execute(stmt).first()
+
+        if result:
+            updateData(entry)
+            return {"Werte wurden aktualisiert"}
+
+
+
+        input_data = WeatherInfo(
+            date = entry.i_date,
+            precipitation = entry.i_precipitation,
+            temp_max = entry.i_temp_max,
+            temp_min = entry.i_temp_min,
+            wind = entry.i_wind,
+            weather = entry.i_weather)
+
+
+        session.add(input_data)
+        session.commit()
+
+
+        return {"success": True}
+
+@app.post("/weather/updateEntry")
+async def update_entry(entry : WeatherCreate):
+    result = updateData(entry)
+
+    return {"success, updaten ist ": result}
+
+
+@app.post("/weather/deleteEntry")
+async def delete_entry(entry : WeatherCreate):
+
+    with Session(Engine) as session:
+        stmt = delete(WeatherInfo).where(WeatherInfo.date == entry.i_date)
+        result = session.execute(stmt)
+        session.commit()
+
+
+
+    return {"Das Löschen war: ": result}
+
+
+
 
