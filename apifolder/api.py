@@ -1,28 +1,26 @@
-import io
 from datetime import date, timedelta, datetime
 import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from matplotlib.pyplot import subplot
-from sqlalchemy.dialects.mysql import insert
 
-from src.settings import Engine, WeatherInfo, Session, WeatherCreate
-from sqlalchemy import select, extract, RowMapping, update, delete
+from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId
+from sqlalchemy import select, extract, update, delete
 import base64
 import numpy as np
 import io
 from sklearn.linear_model import LinearRegression
-import requests
-
 
 router = APIRouter()
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],  # test
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 def switch_data(type):
@@ -121,7 +119,7 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
     if not switch_data(type):
         return {"message": "No data available for this type"}
 
-    universal_diagram.figure(figsize = (6,4),dpi = 200)
+    #universal_diagram.figure(figsize = (6,4),dpi = 200)
 
     days = []
     values = []
@@ -262,8 +260,8 @@ async def get_prediction(target_date: str,):
     forecast_diagram.bar(days, temp_range, bottom=dependent_values, color=colors_max, label="Max-Min Spanne")
     forecast_diagram.axhline(0, color='black', linewidth=0.5)
 
-    #fig.set_xlabel('Tage')
-    #fig.set_ylabel('Temperator in °')
+    forecast_diagram.set_xlabel('Tage')
+    forecast_diagram.set_ylabel('Temperatur in °C')
     forecast_diagram.tick_params(axis='x', rotation=90)
     fig.tight_layout()
 

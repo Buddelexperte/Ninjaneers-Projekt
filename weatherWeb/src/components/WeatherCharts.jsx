@@ -5,8 +5,7 @@ function WeatherChart() {
   const [data, setData] = useState([]);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    async function fetchWeatherData() {
+  async function fetchWeatherData() {
       try {
         const response = await fetch("http://127.0.0.1:8000/weather/all", { mode: "cors" });
         if (!response.ok)
@@ -33,6 +32,7 @@ function WeatherChart() {
       }
     }
 
+  useEffect(() => {
     fetchWeatherData();
   }, []);
 

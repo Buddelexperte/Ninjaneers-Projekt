@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from "react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { Trash2, Pencil } from "lucide-react";
 
-const DATA_TYPES = ["precipitation", "temp_max", "temp_min", "wind", "weather"];
+const COLUMNS = [
+  { label: "Date", key: "date" },
+  { label: "Precipitation", key: "precipitation" },
+  { label: "Max Temp", key: "temp_max" },
+  { label: "Min Temp", key: "temp_min" },
+  { label: "Wind", key: "wind" },
+  { label: "Weather", key: "weather" },
+];
 
-const COL_NAMES = ["Precipitation", "Max Temp", "Min Temp", "Wind", "Weather"];
+const DATA_TYPES = ["precipitation", "temp_max", "temp_min", "wind"];
 
 function openBase64Image(base64String) {
   const img = new Image();
@@ -29,34 +35,98 @@ async function fetchJSON(url) {
   }
 }
 
-async function fetchImageData(startDate, endDate, dataType) {
+async function fetchImageTimeframe(startDate, endDate, dataType) {
   const url = `http://localhost:8000/weather/timeframe/${startDate}/${endDate}/${dataType}`;
   const res = await fetchJSON(url);
   return res?.image_base64 || null;
 }
 
-function WeatherTable() {
-  const [data, setData] = useState([]);
-  const [years, setYears] = useState([]);
-  const [selectedYear, setSelectedYear] = useState("all");
-  const [sortConfig, setSortConfig] = useState({ col: "date", dir: "asc" });
+async function fetchImagePrediction(date) {
+  const url = `http://localhost:8000/weather/predict/${date}`;
+  const res = await fetchJSON(url);
+  return res?.image_base64 || null;
+}
 
+function WeatherTable() {
+  // current fetched data
+  const [data, setData] = useState([]);
+  // all present years in data (also fetched)
+  const [years, setYears] = useState([]);
+  // selected years (filtering)
+  const [selectedYear, setSelectedYear] = useState("all");
+  // Sorting by which category and which direction
+  const [sortConfig, setSortConfig] = useState({ col: "date", dir: "asc" });
+  // Timeframe view: Which category, start Date, end Date
   const [selectedType, setSelectedType] = useState(DATA_TYPES[0]);
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  // date for prediction, only works if prev days have data
+  const [predictionDate, setPredictionDate] = useState("");
+
+  // Inserting new data
+  const ENTRY_KEY_MAP = {
+    date: "i_date",
+    precipitation: "i_precipitation",
+    temp_max: "i_temp_max",
+    temp_min: "i_temp_min",
+    wind: "i_wind",
+    weather: "i_weather",
+  };
+
+
+  const [isInsertModalOpen, setIsInsertModalOpen] = useState(false);
+  const [newEntry, setNewEntry] = useState({
+    i_id: -1,
+    i_date: "",
+    i_precipitation: "",
+    i_temp_max: "",
+    i_temp_min: "",
+    i_wind: "",
+    i_weather: ""
+  });
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editEntry, setEditEntry] = useState(null);
+
+
+  const loadWeatherData = async () => {
+    const url =
+    selectedYear === "all"
+      ? "http://127.0.0.1:8000/weather/all"
+      : `http://127.0.0.1:8000/weather/year/${selectedYear}`;
+    const result = await fetchJSON(url);
+    setData(result);
+  };
+  
+  const loadYearData = async () => {
+    fetchJSON("http://127.0.0.1:8000/weather/years/all").then((res) =>
+        setYears(res.map(String))
+    );
+  }
 
   useEffect(() => {
-    fetchJSON("http://127.0.0.1:8000/weather/years/all").then((res) =>
-      setYears(res.map(String))
-    );
+    loadYearData();
   }, []);
 
   useEffect(() => {
-    const url =
-      selectedYear === "all"
-        ? "http://127.0.0.1:8000/weather/all"
-        : `http://127.0.0.1:8000/weather/year/${selectedYear}`;
-    fetchJSON(url).then(setData);
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsInsertModalOpen(false);
+      }
+    };
+
+    if (isInsertModalOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isInsertModalOpen]);
+
+
+  useEffect(() => {
+    loadWeatherData();
   }, [selectedYear]);
 
   const handleSort = (col) => {
@@ -77,61 +147,205 @@ function WeatherTable() {
     });
   };
 
-  const handleImageRequest = async () => {
+  const submitNewEntry = async () => {
+    try
+    {
+      const response = await fetch("http://localhost:8000/weather/addEntry", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newEntry),
+      });
+      if (!response.ok) throw new Error("Failed to insert");
+
+      setIsInsertModalOpen(false);
+      setNewEntry({ i_id: -1, i_date: "", i_precipitation: "", i_temp_max: "", i_temp_min: "", i_wind: "", i_weather: "" });
+      loadWeatherData();
+      loadYearData();
+    }
+    catch (error)
+    {
+      console.error("Error submitting entry:", error);
+      alert("Failed to insert data.");
+    }
+  };
+
+  const submitEditEntry = async () => {
+    try
+    {
+      const response = await fetch("http://localhost:8000/weather/updateEntry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editEntry),
+      });
+
+      if (!response.ok) throw new Error("Failed to update");
+
+      setIsEditModalOpen(false);
+      setEditEntry(null);
+      loadWeatherData();
+      loadYearData();
+    }
+    catch (error)
+    {
+      console.error("Error updating entry:", error);
+      alert("Failed to update data.");
+    }
+  };
+
+
+  const deleteEntry = async(id) => {
+    try
+    {
+      const response = await fetch("http://localhost:8000/weather/deleteEntry", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({id : id}),
+      });
+      if (!response.ok) throw new Error("Failed to insert");
+
+      setIsInsertModalOpen(false);
+      setNewEntry({ date: "", precipitation: "", temp_max: "", temp_min: "", wind: "", weather: "" });
+      loadWeatherData();
+      loadYearData();
+    }
+    catch (error)
+    {
+      console.error("Error deleting entry:", error);
+      alert("Failed to delete data.");
+    }
+  }
+
+  const handleTimeFrameImage = async () => {
     if (!startDate || !endDate || !selectedType) {
       return alert("Please select all inputs.");
     }
-    const startStr = startDate.toISOString().split("T")[0];
-    const endStr = endDate.toISOString().split("T")[0];
-    const base64 = await fetchImageData(startStr, endStr, selectedType);
+
+    const base64 = await fetchImageTimeframe(startDate, endDate, selectedType);
     if (base64) openBase64Image(base64);
+  };
+
+  const handlePredictionImage = async () => {
+    if (!predictionDate) {
+      return alert("Please select a prediction date.");
+    }
+
+    const base64 = await fetchImagePrediction(predictionDate);
+    if (base64) openBase64Image(base64);
+  };
+
+  const handleOpenInsertMenu = () => {
+    setIsInsertModalOpen(true)
+    // Implement inserting logic here
+  };
+
+  const handleEdit = (row) => {
+    const entry = {
+      i_id: row.id,
+      i_date: row.date,
+      i_precipitation: row.precipitation,
+      i_temp_max: row.temp_max,
+      i_temp_min: row.temp_min,
+      i_wind: row.wind,
+      i_weather: row.weather,
+    };
+    setEditEntry(entry);
+    setIsEditModalOpen(true);
+  };
+
+
+  const handleDelete = (id) => {
+    if (window.confirm("Are you sure you want to delete this row?")) {
+      deleteEntry(id);
+    }
   };
 
   return (
     <div className="main-container">
-      <div className="image-controls">
-        <Control label="Data Type:">
-          <select className="dropdown" value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
-            {DATA_TYPES.map((type) => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </Control>
+      <div className="chart-dashboard">
+        <div className="image-controls">
+          <Control label="Data Type:">
+            <select className="dropdown" value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
+              {DATA_TYPES.map((type) => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </Control>
 
-        <Control label="Start Date:">
-          <DatePicker className="datepicker" selected={startDate} onChange={setStartDate} dateFormat="yyyy-MM-dd" />
-        </Control>
+          <Control label="Start Date:">
+            <input
+              type="date"
+              className="form-input"
+              value={startDate || ""}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
 
-        <Control label="End Date:">
-          <DatePicker className="datepicker" selected={endDate} onChange={setEndDate} dateFormat="yyyy-MM-dd" />
-        </Control>
+          </Control>
 
-        <Control>
-          <button className="standalone-btn" onClick={handleImageRequest}>Open Chart</button>
-        </Control>
+          <Control label="End Date:">
+            <input
+              type="date"
+              className="form-input"
+              value={endDate || ""}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+
+          </Control>
+
+          <Control>
+            <button className="standalone-btn" onClick={handleTimeFrameImage}>Open Chart</button>
+          </Control>
+        </div>
+        <div className="weather-prediction">
+
+          <Control label="Temp Prediction for Date:">
+            <input
+              type="date"
+              className="form-input"
+              value={predictionDate || ""}
+              onChange={(e) => setPredictionDate(e.target.value)}
+            />
+          </Control>
+
+          <Control>
+            <button className="standalone-btn" onClick={handlePredictionImage}>Open Prediction</button>
+          </Control>
+        </div>
       </div>
 
       <div className="table-layout">
-        <div className="year-filter">
-          <label className="input-label">Filter by Year:</label>
-          <select className="dropdown" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
-            <option value="all">All Years</option>
-            {years.map((year) => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
+        <div className="sticky-widget-col">
+          <div className="year-filter">
+            <label className="input-label">Filter by Year:</label>
+            <select className="dropdown" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
+              <option value="all">All Years</option>
+              {years.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+          <div className="add-entry">
+            <Control>
+              <button className="standalone-btn" onClick={handleOpenInsertMenu}>Add Entry</button>
+            </Control>
+          </div>
         </div>
-        <div className="sticky-wrapper">
-          <div className="weather-table-wrapper">
+
+        <div className="weather-table-wrapper">
+            <div className="scrollable-div">
             <table className="weather-table">
               <thead>
                 <tr>
-                  {["date", ...COL_NAMES].map((col) => (
-                    <th key={col} className="sortable" onClick={() => handleSort(col)}>
-                      {col.charAt(0).toUpperCase() + col.slice(1)}
-                      {sortConfig.col === col ? (sortConfig.dir === "asc" ? " ▲" : " ▼") : ""}
+                  {COLUMNS.map((col) => (
+                    <th key={col.key} className="sortable" onClick={() => handleSort(col.key)}>
+                      {col.label}
+                      {sortConfig.col === col.key ? (sortConfig.dir === "asc" ? " ▲" : " ▼") : ""}
                     </th>
                   ))}
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,20 +353,80 @@ function WeatherTable() {
                   const row = entry.WeatherInfo || entry;
                   return (
                     <tr className="table-body-row" key={row.id}>
-                      <td>{row.date}</td>
-                      <td>{row.precipitation}</td>
-                      <td>{row.temp_max}</td>
-                      <td>{row.temp_min}</td>
-                      <td>{row.wind}</td>
-                      <td>{row.weather}</td>
+                      {COLUMNS.map((col) => (
+                        <td key={col.key}>{row[col.key]}</td>
+                      ))}
+                      <td className="action-cell">
+                        <button onClick={() => handleEdit(row)} className="icon-btn" title="Edit">
+                          <Pencil size={18} />
+                        </button>
+                        <button onClick={() => handleDelete(row.id)} className="icon-btn" title="Delete">
+                          <Trash2 size={18} color="red" />
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+              </div>
+          </div>
+      </div>
+      {isInsertModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Add New Weather Entry</h2>
+            {COLUMNS.map(({ label, key }) => {
+              const entryKey = ENTRY_KEY_MAP[key];
+              return (
+                <Control label={label} key={key} className="form-row">
+                  <input
+                    className="form-input-stretch"
+                    type={key === "date" ? "date" : "text"}
+                    value={newEntry[entryKey] || ""}
+                    onChange={(e) =>
+                      setNewEntry((prev) => ({ ...prev, [entryKey]: e.target.value }))
+                    }
+                  />
+                </Control>
+              );
+            })}
+
+            <div className="modal-buttons">
+              <button className="standalone-btn" onClick={() => setIsInsertModalOpen(false)}>Cancel</button>
+              <button className="standalone-btn" onClick={submitNewEntry}>Submit</button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+      {isEditModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Edit Weather Entry</h2>
+            {COLUMNS.map(({ label, key }) => {
+              const entryKey = ENTRY_KEY_MAP[key];
+              return (
+                <Control label={label} key={key} className="form-row">
+                  <input
+                    className="form-input-stretch"
+                    type={key === "date" ? "date" : "text"}
+                    value={editEntry?.[entryKey] ?? ""}
+                    onChange={(e) =>
+                      setEditEntry((prev) => ({ ...prev, [entryKey]: e.target.value }))
+                    }
+                  />
+                </Control>
+              );
+            })}
+
+            <div className="modal-buttons">
+              <button className="standalone-btn" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
+              <button className="standalone-btn" onClick={submitEditEntry}>Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
