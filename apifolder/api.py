@@ -53,7 +53,7 @@ def updateData(data : WeatherCreate):
     with Session(Engine) as session:
 
 
-        stmt = (update(WeatherInfo).where(WeatherInfo.date == data.i_date).values(
+        stmt = (update(WeatherInfo).where(WeatherInfo.id == data.i_id).values(
             precipitation=data.i_precipitation,
             temp_max=data.i_temp_max,
             temp_min=data.i_temp_min,
@@ -279,7 +279,7 @@ async def get_prediction(target_date: str,):
 async def add_entry(entry : WeatherCreate):
 
     with Session(Engine) as session:
-        stmt = select(WeatherInfo).where(WeatherInfo.date == entry.i_date)
+        stmt = select(WeatherInfo).where(WeatherInfo.id == entry.i_id)
         result = session.execute(stmt).first()
 
         if result:
@@ -311,10 +311,10 @@ async def update_entry(entry : WeatherCreate):
 
 
 @app.post("/weather/deleteEntry")
-async def delete_entry(entry : WeatherCreate):
+async def delete_entry(entry : WeatherDeleteWithId):
 
     with Session(Engine) as session:
-        stmt = delete(WeatherInfo).where(WeatherInfo.date == entry.i_date)
+        stmt = delete(WeatherInfo).where(WeatherInfo.id == entry.id)
         result = session.execute(stmt)
         session.commit()
 

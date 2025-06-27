@@ -22,6 +22,7 @@ class WeatherInfo (Base) :
 
 #Schema wie die json aussehen muss
 class WeatherCreate(BaseModel):
+    i_id : int
     i_date: date
     i_precipitation : float
     i_temp_max: float
@@ -29,6 +30,8 @@ class WeatherCreate(BaseModel):
     i_wind: float
     i_weather: str
 
+class WeatherDeleteWithId(BaseModel):
+    id : int
 
 Base.metadata.create_all(Engine)
 
