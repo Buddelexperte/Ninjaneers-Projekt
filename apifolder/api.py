@@ -158,11 +158,14 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
     return {"image_base64": encoded_string}
 
 
-@app.get("/weather/predict/{target_date}/{independent_type}/{dependent_type}")
-async def get_prediction(target_date: str, independent_type: str, dependent_type: str):
+@app.get("/weather/predict/{target_date}")
+async def get_prediction(target_date: str,):
     year, month, day = map(int, target_date.split("-"))
     predict_date = date(year, month, day)
     start_date = predict_date - timedelta(days=10)
+
+    independent_type = 'temp_max'
+    dependent_type = 'temp_min'
 
     independent_values = [] # Maximale Temp
     dependent_values = [] # minimale Temp
@@ -173,18 +176,20 @@ async def get_prediction(target_date: str, independent_type: str, dependent_type
         days.append(current_date.strftime("%Y-%m-%d"))
         with Session(Engine) as session:
             # Min
-            stmt_ind = select(switch_data(independent_type)).where(WeatherInfo.date == current_date)
+            stmt_ind = select(WeatherInfo.temp_max).where(WeatherInfo.date == current_date)
             row_ind = session.execute(stmt_ind).mappings().first()
             if row_ind is None:
                 return {"error": f"Keine Daten für {current_date} (independent)"}
-            independent_values.append(row_ind[independent_type])
+            independent_values.append(row_ind[WeatherInfo.temp_max])
 
             # Max
-            stmt_dep = select(switch_data(dependent_type)).where(WeatherInfo.date == current_date)
+            stmt_dep = select(WeatherInfo.temp_min).where(WeatherInfo.date == current_date)
             row_dep = session.execute(stmt_dep).mappings().first()
             if row_dep is None:
                 return {"error": f"Keine Daten für {current_date} (dependent)"}
-            dependent_values.append(row_dep[dependent_type])
+            dependent_values.append(row_dep[WeatherInfo.temp_min])
+
+
 
         current_date += timedelta(days=1)
 
@@ -195,10 +200,6 @@ async def get_prediction(target_date: str, independent_type: str, dependent_type
     for i in range(10):
         input_prediction.append(independent_values[i])
         input_prediction.append(dependent_values[i])
-
-    diagram_values_x = np.array([independent_values])
-    diagram_values_y = np.array([dependent_values])
-
 
 
 
@@ -230,8 +231,10 @@ async def get_prediction(target_date: str, independent_type: str, dependent_type
     colors_min = ['lightblue'] * (length - 1) + ['blue']
     colors_max = ['orange'] * (length - 1) + ['red']
 
-    forecast_diagram.bar(days,dependent_values, color=colors_min)
-    forecast_diagram.bar(days, independent_values, bottom=dependent_values, color=colors_max)
+    temp_range = [max_ - min_ for min_, max_ in zip(dependent_values, independent_values)]
+
+    forecast_diagram.bar(days, temp_range, bottom=dependent_values, color=colors_max, label="Max-Min Spanne")
+    forecast_diagram.axhline(0, color='black', linewidth=0.5)
 
     #fig.set_xlabel('Tage')
     #fig.set_ylabel('Temperator in °')
