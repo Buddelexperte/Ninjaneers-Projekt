@@ -42,5 +42,12 @@ class WeatherCreate(BaseModel):
 class WeatherDeleteWithId(BaseModel):
     id : int
 
+class WeatherLoginCheck(BaseModel):
+    username: str
+    password : str
+
+
+
+
 Base.metadata.create_all(Engine)
 

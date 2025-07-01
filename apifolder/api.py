@@ -3,7 +3,8 @@ import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin
+from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, \
+    WeatherLoginCheck
 from sqlalchemy import select, extract, update, delete
 import base64
 import numpy as np
@@ -73,12 +74,18 @@ def updateData(data : WeatherCreate):
 
 def createUser(i_username : str, i_password : str):
     with Session(Engine) as session:
-        new_login_set = WeatherLogin(
-            username = i_username,
-            password = i_password,
-        )
 
-        session.add(new_login_set)
+        stmt = select(WeatherLogin.username).where(WeatherLogin.username == i_username)
+
+        result = session.execute(stmt).first()
+
+        if not result:
+            new_login_set = WeatherLogin(
+                username = i_username,
+                password = i_password,
+            )
+
+            session.add(new_login_set)
         session.commit()
         return True
 
@@ -335,27 +342,61 @@ async def delete_entry(entry : WeatherDeleteWithId):
     return {"Das Löschen war: ": result}
 
 
-@app.post("/weather/login/{username}/{password}")
-async def get_login(username: str, password: str):
+@app.post("/weather/login")
+async def get_login(entry : WeatherLoginCheck):
+
     with Session(Engine) as session:
-        stmt = select(WeatherLogin.password).where(WeatherLogin.username == username)
+        stmt = select(WeatherLogin.password).where(WeatherLogin.username == entry.username)
 
         result = session.execute(stmt).first()
 
         if not result:
-            createUser(username, password)
-            return {"success": "Neuer User: " + username + " erstellt"  }
+            return {
+                "success": False,
+                "message" : "Kein User mit dem Namen: " + entry.username
+            }
 
         db_password = result[0]
 
 
 
-        if db_password != password:
-            return{"error": "Falsches Passwort für: " + username}
+        if db_password != entry.password:
+            return{
+                "success": False,
+                "message": "Falsches Passwort für: " + entry.username,
+            }
 
-        elif db_password == password:
+
+
+        elif db_password == entry.password:
             return {"success": "Du bist eingeloggt"}
 
+@app.post("/weather/signIn")
+async def createNewUser(entry : WeatherLoginCheck):
+    createUser(entry.username, entry.password)
+
+    return True
+
+@app.post("/weather/deleteUser")
+async def deleteUser(entry : WeatherLoginCheck):
+    with Session(Engine) as session:
+        stmt = delete(WeatherLogin).where((WeatherLogin.username == entry.username) & (WeatherLogin.password == entry.password))
+        session.execute(stmt)
+        session.commit()
+
+    return True
+
+@app.put("/weather/updateUser")
+async def updateUser(entry : WeatherLoginCheck, entryNewData : WeatherLoginCheck):
+    with Session(Engine) as session:
+        stmt = update(WeatherLogin).where((WeatherLogin.username == entry.username) & (WeatherLogin.password == entry.password)).values(
+            username=entryNewData.username,
+            password=entryNewData.password
+        )
+        session.execute(stmt)
+        session.commit()
+
+    return True
 
 
 
