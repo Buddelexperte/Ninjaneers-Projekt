@@ -3,7 +3,7 @@ import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId
+from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin
 from sqlalchemy import select, extract, update, delete
 import base64
 import numpy as np
@@ -69,7 +69,19 @@ def updateData(data : WeatherCreate):
         session.commit()
 
         return True
-    return False
+
+
+def createUser(i_username : str, i_password : str):
+    with Session(Engine) as session:
+        new_login_set = WeatherLogin(
+            username = i_username,
+            password = i_password,
+        )
+
+        session.add(new_login_set)
+        session.commit()
+        return True
+
 
 
 @app.get("/")
@@ -321,6 +333,31 @@ async def delete_entry(entry : WeatherDeleteWithId):
 
 
     return {"Das Löschen war: ": result}
+
+
+@app.post("/weather/login/{username}/{password}")
+async def get_login(username: str, password: str):
+    with Session(Engine) as session:
+        stmt = select(WeatherLogin.password).where(WeatherLogin.username == username)
+
+        result = session.execute(stmt).first()
+
+        if not result:
+            print("Kein User mit dem Namen vorhanden")
+            createUser(username, password)
+            return {"success": "so halb"}
+
+        db_password = result[0]
+
+
+
+        if db_password != password:
+            print("Falsches passwort für " + username)
+            return{"success": False}
+        elif db_password == password:
+            print("Richtiges Passwort, du wirst eingeloggt")
+            return {"success": True}
+
 
 
 
