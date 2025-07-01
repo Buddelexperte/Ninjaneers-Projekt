@@ -20,6 +20,15 @@ class WeatherInfo (Base) :
     wind = Column(Float)
     weather= Column(String(10))
 
+
+class WeatherLogin(Base):
+    __tablename__ = 'weather_login'
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String(50))
+    password = Column(String(50))
+
+
 #Schema wie die json aussehen muss
 class WeatherCreate(BaseModel):
     i_id : int
@@ -32,6 +41,13 @@ class WeatherCreate(BaseModel):
 
 class WeatherDeleteWithId(BaseModel):
     id : int
+
+class WeatherLoginCheck(BaseModel):
+    username: str
+    password : str
+
+
+
 
 Base.metadata.create_all(Engine)
 

@@ -1,6 +1,6 @@
 from datetime import date
 import csv
-from src.settings import session, WeatherInfo
+from src.settings import session, WeatherInfo, WeatherLogin
 
 # Delete all prev records
 session.query(WeatherInfo).delete()
@@ -34,7 +34,15 @@ for row in rows:
         weather=weather_str,
     )
 
-    session.add(new_set)
+    #session.add(new_set)
+
+new_login_set = WeatherLogin(
+    username = 'root',
+    password = str(0000),
+)
+
+session.add(new_login_set)
+
 
 # Commiting changes
 session.commit()
