@@ -343,20 +343,18 @@ async def get_login(username: str, password: str):
         result = session.execute(stmt).first()
 
         if not result:
-            print("Kein User mit dem Namen vorhanden")
             createUser(username, password)
-            return {"success": "so halb"}
+            return {"success": "Neuer User: " + username + " erstellt"  }
 
         db_password = result[0]
 
 
 
         if db_password != password:
-            print("Falsches passwort für " + username)
-            return{"success": False}
+            return{"error": "Falsches Passwort für: " + username}
+
         elif db_password == password:
-            print("Richtiges Passwort, du wirst eingeloggt")
-            return {"success": True}
+            return {"success": "Du bist eingeloggt"}
 
 
 
