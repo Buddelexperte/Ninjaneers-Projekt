@@ -369,13 +369,19 @@ async def get_login(entry : WeatherLoginCheck):
 
 
         elif db_password == entry.password:
-            return {"success": "Du bist eingeloggt"}
+            return {
+                "success": True,
+                "message" : "Du bist eingeloggt"
+            }
 
-@app.post("/weather/signIn")
+@app.post("/weather/signup")
 async def createNewUser(entry : WeatherLoginCheck):
     createUser(entry.username, entry.password)
 
-    return True
+    return {
+        "success": True,
+        "message" : "Sign Up erfolgreich"
+    }
 
 @app.post("/weather/deleteUser")
 async def deleteUser(entry : WeatherLoginCheck):
@@ -384,7 +390,10 @@ async def deleteUser(entry : WeatherLoginCheck):
         session.execute(stmt)
         session.commit()
 
-    return True
+    return {
+        "success" : True,
+        "message" : "User wurde versucht zu Löschen"
+    }
 
 @app.put("/weather/updateUser")
 async def updateUser(entry : WeatherLoginCheck, entryNewData : WeatherLoginCheck):
@@ -396,7 +405,10 @@ async def updateUser(entry : WeatherLoginCheck, entryNewData : WeatherLoginCheck
         session.execute(stmt)
         session.commit()
 
-    return True
+    return {
+        "success" : True,
+        "message" : "User [" + entry.username + "wurde aktualisiert (jetzt " + entryNewData.username + ")"
+    }
 
 
 

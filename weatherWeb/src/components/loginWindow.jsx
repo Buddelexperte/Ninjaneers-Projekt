@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 
-const LOGIN_CHECK_URL = "";
+const LOGIN_CHECK_URL = "http://localhost:8000/weather/login";
 
 class Login extends Component {
   constructor(props) {
@@ -29,18 +29,20 @@ class Login extends Component {
             body : JSON.stringify(this.state)
         });
         if (!loginTryRes.ok) throw new Error(`HTTP error: ${res.status}`);
+        const json = await loginTryRes.json();
+
+        if (json.success)
+        {
+          this.props.onLoginSuccess();
+        }
+      alert(json.message || "Unknown login error");
+
     } catch (err) {
         console.error("Fetch error:", err.message);
         return [];
     }
 
-    const json = await loginTryRes.json();
 
-    if (json.success) {
-      this.props.onLoginSuccess();
-    } else {
-      alert(json.message || "Unknown login error");
-    }
   };
 
   render() {
