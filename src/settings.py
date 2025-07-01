@@ -27,6 +27,7 @@ class WeatherLogin(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(50))
     password = Column(String(50))
+    status = Column(String(50))
 
 
 #Schema wie die json aussehen muss
@@ -42,9 +43,11 @@ class WeatherCreate(BaseModel):
 class WeatherDeleteWithId(BaseModel):
     id : int
 
-class WeatherLoginCheck(BaseModel):
+class WeatherLoginUserInfo(BaseModel):
     username: str
     password : str
+    status : str
+
 
 
 

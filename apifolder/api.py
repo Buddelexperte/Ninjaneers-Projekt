@@ -3,8 +3,7 @@ import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, \
-    WeatherLoginCheck
+from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo
 from sqlalchemy import select, extract, update, delete
 import base64
 import numpy as np
@@ -72,7 +71,7 @@ def updateData(data : WeatherCreate):
         return True
 
 
-def createUser(i_username : str, i_password : str):
+def createUser(i_username : str, i_password : str, i_status : str):
     with Session(Engine) as session:
 
         stmt = select(WeatherLogin.username).where(WeatherLogin.username == i_username)
@@ -83,11 +82,13 @@ def createUser(i_username : str, i_password : str):
             new_login_set = WeatherLogin(
                 username = i_username,
                 password = i_password,
+                status = i_status
             )
 
             session.add(new_login_set)
-        session.commit()
-        return True
+            session.commit()
+            return True
+        return False
 
 
 
@@ -343,7 +344,7 @@ async def delete_entry(entry : WeatherDeleteWithId):
 
 
 @app.post("/weather/login")
-async def get_login(entry : WeatherLoginCheck):
+async def get_login(entry : WeatherLoginUserInfo):
 
     with Session(Engine) as session:
         stmt = select(WeatherLogin.password).where(WeatherLogin.username == entry.username)
@@ -375,8 +376,12 @@ async def get_login(entry : WeatherLoginCheck):
             }
 
 @app.post("/weather/signup")
-async def createNewUser(entry : WeatherLoginCheck):
-    createUser(entry.username, entry.password)
+async def createNewUser(newUserInfo : WeatherLoginUserInfo):
+    if not createUser(newUserInfo.username, newUserInfo.password, 'user'):
+        return {
+            "success": False,
+            "message" : "Name existiert bereits"
+        }
 
     return {
         "success": True,
@@ -384,31 +389,92 @@ async def createNewUser(entry : WeatherLoginCheck):
     }
 
 @app.post("/weather/deleteUser")
-async def deleteUser(entry : WeatherLoginCheck):
+async def deleteUser(currentUser : WeatherLoginUserInfo, userToDelete : WeatherLoginUserInfo ):
     with Session(Engine) as session:
-        stmt = delete(WeatherLogin).where((WeatherLogin.username == entry.username) & (WeatherLogin.password == entry.password))
-        session.execute(stmt)
-        session.commit()
+        currentUserStmt = select(WeatherLogin).where(WeatherLogin.username == currentUser.username)
+        currentUserResult = session.execute(currentUserStmt).first()
 
-    return {
-        "success" : True,
-        "message" : "User wurde versucht zu Löschen"
-    }
+        if not currentUserResult:
+            return {
+                "success": False,
+                "message": f"User '{currentUser.username}' wurde nicht gefunden."
+            }
+
+        tmp = currentUserResult[0]
+        currentUserStatus = tmp.status
+
+        userToDeleteStmt = select(WeatherLogin).where(WeatherLogin.username == userToDelete.username)
+        userToDeleteResult = session.execute(userToDeleteStmt).first()
+
+        if not userToDeleteResult:
+            return {
+                "success": False,
+                "message": f"User '{userToDelete.username}' existiert nicht und kann nicht gelöscht werden."
+            }
+
+
+
+        tmp = userToDeleteResult[0]
+        userToDeleteStatus = tmp.status
+
+
+        if currentUserStatus == 'admin' and userToDeleteStatus != 'admin':
+            stmt = delete(WeatherLogin).where(WeatherLogin.username == userToDelete.username)
+            session.execute(stmt)
+            session.commit()
+            return {"success": True,
+                    "message": "User wurde von Admin gelöscht"
+                    }
+
+        elif currentUserStatus == 'admin' and currentUser.username == userToDelete.username:
+            return {"success": False,
+                    "message": "Admin darf nicht gelöscht werden"
+                    }
+
+
+        else:
+            stmt = delete(WeatherLogin).where((WeatherLogin.username == currentUser.username) & (WeatherLogin.password == currentUser.password))
+            session.execute(stmt)
+            session.commit()
+
+            return {
+                "success": True,
+                "message": "User wurde gelöscht"
+            }
 
 @app.put("/weather/updateUser")
-async def updateUser(entry : WeatherLoginCheck, entryNewData : WeatherLoginCheck):
+async def updateUser(currentUser : WeatherLoginUserInfo, newUserData : WeatherLoginUserInfo):
     with Session(Engine) as session:
-        stmt = update(WeatherLogin).where((WeatherLogin.username == entry.username) & (WeatherLogin.password == entry.password)).values(
-            username=entryNewData.username,
-            password=entryNewData.password
-        )
-        session.execute(stmt)
-        session.commit()
 
-    return {
-        "success" : True,
-        "message" : "User [" + entry.username + "wurde aktualisiert (jetzt " + entryNewData.username + ")"
-    }
+        stmt = select(WeatherLogin.status).where(WeatherLogin.username == currentUser.username)
+        status = session.execute(stmt).first()
+
+
+
+
+        ## Updates the status of an user if the current user is an admin
+        if status == 'admin' and currentUser.username != newUserData.username:
+            stmt = update(WeatherLogin).where(WeatherLogin.username == newUserData.username).values(status = newUserData.status)
+            session.execute(stmt)
+            session.commit()
+
+            return{"success": True,
+                   "message": "User wurde von Admin aktualisiert"
+            }
+
+        ## Updates a user by that the user wants to change exepts the status -> needs password to confirm identity
+        else:
+            stmt = update(WeatherLogin).where((WeatherLogin.username == currentUser.username) & (WeatherLogin.password == currentUser.password)).values(
+            username=newUserData.username,
+            password=newUserData.password
+            )
+            session.execute(stmt)
+            session.commit()
+
+        return {
+            "success" : True,
+            "message" : "User [" + currentUser.username + "wurde aktualisiert (jetzt " + newUserData.username + ")"
+        }
 
 
 
