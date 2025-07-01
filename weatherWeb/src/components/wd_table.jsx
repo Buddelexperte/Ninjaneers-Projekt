@@ -47,7 +47,7 @@ async function fetchImagePrediction(date) {
   return res?.image_base64 || null;
 }
 
-function WeatherTable() {
+function Wd_table() {
   // current fetched data
   const [data, setData] = useState([]);
   // all present years in data (also fetched)
@@ -440,4 +440,4 @@ function Control({ label, children }) {
   );
 }
 
-export default WeatherTable;
+export default Wd_table;

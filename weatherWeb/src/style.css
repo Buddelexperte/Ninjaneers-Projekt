@@ -4,13 +4,76 @@ body {
   color: #333;
 }
 
-body div {
+body div, input {
   border-radius: 8px;
 }
 
 th {
   position: sticky;
   top: 0;
+}
+
+.title-bar {
+  position: fixed;
+  top: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 80%;
+  max-width: 1000px;
+  padding: 1rem;
+  border-radius: 40px;
+  background-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  height: 70px;
+}
+
+
+
+.left-title-icon {
+  position: absolute;
+  left: 1.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #333;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  transition: 0.3s color ease-out;
+}
+
+.right-title-icon {
+  position: absolute;
+  right: 1.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #333;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  transition: 0.3s color ease-out;
+}
+
+
+.title {
+  position: absolute;
+  left: 50%;
+  top: 25%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.left-title-icon:hover {
+  color: #0077ff;
+}
+
+.right-title-icon:hover {
+  color: #0077ff;
 }
 
 .table-layout {
@@ -115,9 +178,10 @@ h1 {
 }
 
 .dashboard {
+  padding-top: 150px;
   display: flex;
   justify-content: center;
-  margin: 2rem 0 5rem;
+  margin: 3rem 0 5rem;
 }
 
 .view-switch-div {
@@ -187,21 +251,19 @@ h1 {
   padding: 0.55rem 0.55rem;
   border: 1px solid #ccc;
   border-radius: 8px;
-  width: 180px;
+  width: 100%;
 }
 
 .form-input-stretch {
   padding: 0.55rem 0.55rem;
   font-size: 1rem;
   border: 1px solid #ccc;
-  border-radius: 8px;
 }
 
 .dropdown {
   padding: 0.55rem 0.55rem;
   font-size: 1rem;
   border: 1px solid #ccc;
-  border-radius: 8px;
   width: 180px;
 }
 
@@ -220,6 +282,7 @@ h1 {
 }
 
 .modal-overlay {
+  border-radius: 0;
   position: fixed;
   top: 0;
   left: 0;
@@ -251,4 +314,9 @@ h1 {
   display: flex;
   justify-content: space-between;
   gap: 2rem;
+}
+
+.login-signup {
+  display: flex;
+  gap: 1rem;
 }
