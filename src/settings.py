@@ -26,9 +26,13 @@ class WeatherLogin(Base):
 
     id = Column(Integer, primary_key=True)
     username = Column(String(50))
-    password = Column(String(50))
+    password = Column(String(256))
     role = Column(String(50))
 
+class WeatherUserRole(Base):
+    __tablename__ = 'weather_user_role'
+    id = Column(Integer, primary_key=True)
+    roleTitle = Column(String(50))
 
 #Schema wie die json aussehen muss
 class WeatherCreate(BaseModel):
@@ -48,6 +52,8 @@ class WeatherLoginUserInfo(BaseModel):
     password : str
     role : str
 
+class WeatherUserRoleInfo(BaseModel):
+    roleTitle: str
 
 
 

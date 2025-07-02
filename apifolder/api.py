@@ -3,15 +3,19 @@ import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo
+from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo, WeatherUserRole, WeatherUserRoleInfo
 from sqlalchemy import select, extract, update, delete
 import base64
 import numpy as np
 import io
 from sklearn.linear_model import LinearRegression
+from argon2 import PasswordHasher
+from apifolder.hashing import hashPassword, verifyUnhashed
+from typing import List
 
 router = APIRouter()
 app = FastAPI()
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -79,9 +83,11 @@ def createUser(i_username : str, i_password : str, i_role : str):
         result = session.execute(stmt).first()
 
         if not result:
+            hashedPassword = hashPassword(i_password)
+
             new_login_set = WeatherLogin(
                 username = i_username,
-                password = i_password,
+                password = hashedPassword,
                 role = i_role
             )
 
@@ -90,6 +96,16 @@ def createUser(i_username : str, i_password : str, i_role : str):
             return True
         return False
 
+def checkExistingRole(i_roleTitle : str):
+    with Session(Engine) as session:
+        stmt = select(WeatherUserRole).where(WeatherUserRole.roleTitle == i_roleTitle)
+        checkExistingRole = session.execute(stmt).first()
+
+        if not checkExistingRole:
+            return True
+
+        else:
+            return False
 
 
 @app.get("/")
@@ -348,32 +364,21 @@ async def get_login(entry : WeatherLoginUserInfo):
 
     with Session(Engine) as session:
         stmt = select(WeatherLogin.password).where(WeatherLogin.username == entry.username)
+        tmp = session.execute(stmt).first()
 
-        result = session.execute(stmt).first()
-
-        if not result:
+        if not tmp:
             return {
                 "success": False,
-                "message" : "Kein User mit dem Namen: " + entry.username
+                "message": "Kein User mit dem Namen: " + entry.username
             }
 
-        db_password = result[0]
+        result = tmp[0]
+
+        verification = verifyUnhashed(result, entry.password)
+        return verification
 
 
 
-        if db_password != entry.password:
-            return{
-                "success": False,
-                "message": "Falsches Passwort für: " + entry.username,
-            }
-
-
-
-        elif db_password == entry.password:
-            return {
-                "success": True,
-                "message" : "Du bist eingeloggt"
-            }
 
 @app.post("/weather/signup")
 async def createNewUser(newUserInfo : WeatherLoginUserInfo):
@@ -485,6 +490,87 @@ async def updateUser(currentUser : WeatherLoginUserInfo, newUserData : WeatherLo
                 "success" : True,
                 "message" : "User hat seine Informationen geändert"
             }
+
+
+@app.get("/weather/getRoles")
+async def getRoles():
+    with Session(Engine) as session:
+        stmt = select(WeatherUserRole)
+        result = session.execute(stmt).scalars().all()
+
+    return result
+
+@app.post("/weather/createNewRole")
+async def createNewRole(newRole : WeatherUserRoleInfo):
+    with Session(Engine) as session:
+
+        result = checkExistingRole(newRole.roleTitle)
+
+        if result == True:
+            new_role_set = WeatherUserRole(
+                roleTitle = newRole.roleTitle,
+
+            )
+            session.add(new_role_set)
+            session.commit()
+
+            return {"success": True,
+                    "message": f"Neue Rolle: {newRole.roleTitle} wurde hinzugefügt"
+            }
+
+        else:
+            return {"success": False,
+                    "message": f"Rolle: {newRole.roleTitle} ist bereits vorhanden"
+            }
+
+@app.post("/weather/getUserRole")
+async def getUserRole(user : WeatherLoginUserInfo):
+    with Session(Engine) as session:
+        stmt = select(WeatherLogin.role).where(WeatherLogin.username == user.username)
+        result = session.execute(stmt).first()
+
+        role = result[0]
+
+        return {"success": True,
+                "message": f"Rolle des Users: {user.username} -> {role}"
+        }
+
+
+@app.get("/weather/getAllUsers")
+async def getAllUsers():
+    with Session(Engine) as session:
+        stmt = select(WeatherLogin)
+        result = session.execute(stmt).scalars().all()
+
+        users = []
+        for user in result:
+            users.append({
+                "username" : user.username,
+                "role" : user.role
+
+            })
+
+        return {"success": True,
+                "message": "Liste aller User mit Rolle",
+                "body": users
+                }
+
+@app.put("/weather/updateUserRoles")
+async def updateUserRoles(users: List[WeatherLoginUserInfo]):
+    with Session(Engine) as session:
+        for user in users:
+            stmt = update(WeatherLogin).where(WeatherLogin.username == user.username).values(role = user.role)
+            session.execute(stmt)
+
+        session.commit()
+        return {"success": True,
+                "message": "Rolle der User wurde verändert"
+                }
+
+
+
+
+
 
 
 
