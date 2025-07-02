@@ -266,7 +266,7 @@ function Wd_table() {
   return (
     <div className="main-container">
       <div className="chart-dashboard">
-        <div className="image-controls">
+        <div className="border-div">
           <Control label="Data Type:">
             <select className="dropdown" value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
               {DATA_TYPES.map((type) => (
@@ -299,7 +299,7 @@ function Wd_table() {
             <button className="standalone-btn" onClick={handleTimeFrameImage}>Open Chart</button>
           </Control>
         </div>
-        <div className="weather-prediction">
+        <div className="border-div">
 
           <Control label="Temp Prediction for Date:">
             <input
@@ -318,7 +318,7 @@ function Wd_table() {
 
       <div className="table-layout">
         <div className="sticky-widget-col">
-          <div className="year-filter">
+          <div className="border-div-col">
             <label className="input-label">Filter by Year:</label>
             <select className="dropdown" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
               <option value="all">All Years</option>

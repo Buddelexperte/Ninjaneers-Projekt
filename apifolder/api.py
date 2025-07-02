@@ -1,17 +1,16 @@
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta
 import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-
+from typing import List
+from apifolder.hashing import hashPassword, verifyUnhashed
+from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo, UserRequest
 from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo, WeatherUserRole, WeatherUserRoleInfo
 from sqlalchemy import select, extract, update, delete
 import base64
 import numpy as np
 import io
 from sklearn.linear_model import LinearRegression
-from argon2 import PasswordHasher
-from apifolder.hashing import hashPassword, verifyUnhashed
-from typing import List
 
 router = APIRouter()
 app = FastAPI()
@@ -378,8 +377,6 @@ async def get_login(entry : WeatherLoginUserInfo):
         return verification
 
 
-
-
 @app.post("/weather/signup")
 async def createNewUser(newUserInfo : WeatherLoginUserInfo):
     if not createUser(newUserInfo.username, newUserInfo.password, 'user'):
@@ -449,7 +446,11 @@ async def deleteUser(currentUser : WeatherLoginUserInfo, userToDelete : WeatherL
             }
 
 @app.put("/weather/updateUser")
-async def updateUser(currentUser : WeatherLoginUserInfo, newUserData : WeatherLoginUserInfo):
+async def updateUser(data : UserRequest):
+
+    currentUser = data.currentUser
+    newUserData = data.newUserData
+
     with Session(Engine) as session:
 
 
@@ -460,8 +461,9 @@ async def updateUser(currentUser : WeatherLoginUserInfo, newUserData : WeatherLo
             session.execute(stmt)
             session.commit()
 
-            return{"success": True,
-                   "message": "User wurde von Admin aktualisiert"
+            return{
+                "success": True,
+                "message": "User Rolle wurde von Admin aktualisiert"
             }
 
         # Updates the login informations of an user, if the requested new Username is available
@@ -486,9 +488,14 @@ async def updateUser(currentUser : WeatherLoginUserInfo, newUserData : WeatherLo
                     session.commit()
 
 
+                return {
+                    "success" : True,
+                    "message" : "User hat seine Informationen geändert"
+                }
+
             return {
-                "success" : True,
-                "message" : "User hat seine Informationen geändert"
+                "success": False,
+                "message" : "Kein Eintrag zum aktualisieren gefunden",
             }
 
 
@@ -532,7 +539,8 @@ async def getUserRole(user : WeatherLoginUserInfo):
         role = result[0]
 
         return {"success": True,
-                "message": f"Rolle des Users: {user.username} -> {role}"
+                "message": f"Rolle des Users: {user.username} -> {role}",
+                "body": role,
         }
 
 

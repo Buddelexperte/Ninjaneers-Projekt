@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
-
-const SIGNUP_URL = "http://localhost:8000/weather/signup";
+import {apiRequest} from "./requestHandler.js";
 
 class Signup extends Component {
   constructor(props) {
@@ -9,7 +8,8 @@ class Signup extends Component {
     this.state = {
       username: "",
       password: "",
-      rep_password: ""
+      rep_password: "",
+      role: "",
     };
   }
 
@@ -19,36 +19,27 @@ class Signup extends Component {
 
   handleSubmit = async (e) => {
     e.preventDefault();
-    const { username, password, rep_password } = this.state;
+    const { username, password, rep_password, role } = this.state;
 
     if (password !== rep_password) {
       alert("Passwords must be repeated");
       return;
     }
 
-    try {
-      const signUpRes = await fetch(SIGNUP_URL, {
-        method: "POST",
-        mode: "cors",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
+    const res = await apiRequest(
+        "signup",
+        {
+          method: "POST",
+          body : { username, password, role }})
 
-      if (!signUpRes.ok) throw new Error(`HTTP error: ${signUpRes.status}`);
-
-      const json = await signUpRes.json();
-
-      if (json.success) {
+      if (res.success)
+      {
         this.props.navigate("/");
-      } else {
-        alert(json.message || "Unknown signup error");
       }
-    } catch (err) {
-      console.error("Fetch error:", err.message);
-      alert("Network or server error.");
-    }
+      else
+      {
+        alert(res.message || "Unknown signup error");
+      }
   };
 
   render() {

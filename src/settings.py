@@ -54,9 +54,9 @@ class WeatherLoginUserInfo(BaseModel):
 
 class WeatherUserRoleInfo(BaseModel):
     roleTitle: str
-
-
-
+class UserRequest(BaseModel):
+    currentUser: WeatherLoginUserInfo
+    newUserData: WeatherLoginUserInfo
 
 Base.metadata.create_all(Engine)
 

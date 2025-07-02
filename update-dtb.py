@@ -5,6 +5,7 @@ from apifolder.hashing import hashPassword, verifyUnhashed
 
 # Delete all prev records
 session.query(WeatherInfo).delete()
+session.query(WeatherLogin).delete()
 session.commit()
 
 rows = []
@@ -35,13 +36,13 @@ for row in rows:
         weather=weather_str,
     )
 
-    #session.add(new_set)
+    session.add(new_set)
 
 new_role_set = WeatherUserRole(
     roleTitle = "admin",
 )
 
-#session.add(new_role_set)
+session.add(new_role_set)
 
 new_login_set = WeatherLogin(
     username = 'root',

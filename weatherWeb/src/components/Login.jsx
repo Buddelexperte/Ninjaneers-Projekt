@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
-
-const LOGIN_CHECK_URL = "http://localhost:8000/weather/login"; // Set your actual login URL
+import {apiRequest} from "./requestHandler.js";
 
 class Login extends Component {
   constructor(props) {
@@ -9,6 +8,7 @@ class Login extends Component {
     this.state = {
       username: "",
       password: "",
+      role: "",
     };
   }
 
@@ -19,31 +19,25 @@ class Login extends Component {
   handleSubmit = async (e) => {
     e.preventDefault();
 
-    try {
-      const loginTryRes = await fetch(LOGIN_CHECK_URL, {
-        method: "POST",
-        mode: "cors",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(this.state),
-      });
+    console.log(this.state);
 
-      if (!loginTryRes.ok)
-        throw new Error(`HTTP error: ${loginTryRes.status}`);
+    const res = await apiRequest(
+        "login",
+        {
+          method: "POST",
+          body: this.state
+        });
 
-      const json = await loginTryRes.json();
-
-      if (json.success) {
-        const usernameJSON = {"username" : this.state.username};
-        this.props.onLoginSuccess(usernameJSON);
-      } else {
-        alert(json.message || "Unknown login error");
-      }
-    } catch (err) {
-      console.error("Fetch error:", err.message);
-      alert("Network or server error.");
+    if (res.success)
+    {
+      const usernameJSON = {"username" : this.state.username};
+      this.props.onLoginSuccess(usernameJSON);
     }
+    else
+    {
+      this.setState({password : ""});
+    }
+    console.log(res.message);
   };
 
   render() {
@@ -57,6 +51,7 @@ class Login extends Component {
               <input
                 name="username"
                 type="text"
+                placeholder="Username eingeben"
                 className="form-input-stretch"
                 value={this.state.username}
                 onChange={this.handleChange}
@@ -68,6 +63,7 @@ class Login extends Component {
               <input
                 name="password"
                 type="password"
+                placeholder="Passwort eingeben"
                 className="form-input-stretch"
                 value={this.state.password}
                 onChange={this.handleChange}
