@@ -35,7 +35,8 @@ class Login extends Component {
       const json = await loginTryRes.json();
 
       if (json.success) {
-        this.props.onLoginSuccess();
+        const usernameJSON = {"username" : this.state.username};
+        this.props.onLoginSuccess(usernameJSON);
       } else {
         alert(json.message || "Unknown login error");
       }

@@ -1,20 +1,52 @@
 import React, { useState } from "react";
 import {User, LogOut} from "lucide-react";
 import Wd_table from "./wd_table.jsx";
-import WeatherChart from "./wd_charts.jsx";
+import Wd_chart from "./wd_charts.jsx";
 import {useNavigate} from "react-router-dom";
 
+function Control({ label, children }) {
+  return (
+    <div className="control-item">
+      {label && <label className="input-label">{label}</label>}
+      {children}
+    </div>
+  );
+}
 
-function WeatherDashboard() {
+// Key mapping for the form fields
+const PROFILE_FIELDS = [
+  { label: "Username:", key: "newUsername", type: "text" },
+  { label: "Password:", key: "newPassword", type: "password" },
+  { label: "Repeat Password:", key: "newRepeatedPassword", type: "password" },
+];
+
+function WeatherDashboard({loggedUser}) {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState("table");
+  const [showProfile, setShowProfile] = useState(false);
+  const [formData, setFormData] = useState({
+    newUsername : "",
+    newPassword : "",
+  });
+
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleProfileSave = (e) => {
+    e.preventDefault();
+    alert(`Username: ${formData.newUsername}\nPassword: ${formData.newPassword}`);
+    setShowProfile(false);
+    setFormData({newUsername : "", newPassword : ""});
+  };
 
   return (
     <div>
       <div className="title-bar">
         <button
             className="left-title-icon"
-            onClick={() => alert("Profile clicked!")}
+            onClick={() => setShowProfile(!showProfile)}
         >
           <User size={40}/>
         </button>
@@ -36,7 +68,41 @@ function WeatherDashboard() {
           </button>
         </div>
       </div>
-      {viewMode === "table" ? <Wd_table /> : <WeatherChart />}
+      {viewMode === "table" ? <Wd_table /> : <Wd_chart />}
+
+      {/* Modal */}
+      {showProfile && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Edit Profile</h2>
+            <form onSubmit={handleProfileSave}>
+              <div className="form-row">
+                {PROFILE_FIELDS.map(({ label, key, type }) => (
+                  <Control key={key} label={label}>
+                    <input
+                      name={key}
+                      type={type}
+                      className="form-input-stretch"
+                      value={formData[key]}
+                      onChange={handleProfileChange}
+                      required
+                    />
+                  </Control>
+                ))}
+              </div>
+            </form>
+            <div className="modal-buttons">
+              <button className="standalone-btn" onClick={() => setShowProfile(false)} type="button">
+                Cancel
+              </button>
+              <button className="standalone-btn" type="submit" onClick={handleProfileSave}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

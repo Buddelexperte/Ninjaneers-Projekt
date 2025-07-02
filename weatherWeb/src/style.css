@@ -144,9 +144,17 @@ h1 {
 
 .chart-dashboard {
   background-color: transparent;
-  display: inline-flex;
+  display: flex;
   gap: 2rem;
   margin: 0 14rem 2rem;
+}
+
+.chart-dashboard > div {
+  justify-content: space-between;
+  flex-grow: 1;    /* Allow to grow and fill remaining space */
+  flex-shrink: 1;  /* Allow to shrink if needed */
+  flex-basis: auto; /* Start size based on content */
+  min-width: 0;    /* Allow shrinking smaller than content */
 }
 
 .image-controls {
@@ -203,6 +211,7 @@ h1 {
   color: white;
   border: none;
   border-radius: 6px;
+  min-width: 100px;
   cursor: pointer;
   transition: background-color 0.5s ease-in-out;
 }

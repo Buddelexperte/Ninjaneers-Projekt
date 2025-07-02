@@ -8,36 +8,44 @@ import {useNavigate, Navigate} from "react-router-dom";
 
 const LoginWithNavigation = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
-  return <Login onLoginSuccess={() => {
-    onLoginSuccess();
+  return <Login onLoginSuccess={(data) => {
+    onLoginSuccess(data);
     navigate("/dashboard");
   }} />;
 };
 
-const PrivateRoute = ({ isLoggedIn, children }) => {
-  if (!isLoggedIn) {
+const PrivateRoute = ({ loggedUser, children }) => {
+    if (!loggedUser.username) {
     return <Navigate to="/" replace />;
   }
   return children;
 };
 
 function App() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [loggedUser, setLoggedUser] = useState({"username" : ""});
 
-    const handleLoginSuccess = () => {
-        setIsLoggedIn(true);
+    const handleLoginSuccess = (data) => {
+        setLoggedUser(data);
     };
 
     return (
         <Router>
             <Routes>
-                <Route path="/" element={<LoginWithNavigation onLoginSuccess={handleLoginSuccess} />} />
-                <Route path="/signup" element={<SignupWrapper />} />
+                <Route
+                    path="/"
+                    element={
+                        <LoginWithNavigation onLoginSuccess={handleLoginSuccess}/>
+                    }
+                />
+                <Route
+                    path="/signup"
+                    element={<SignupWrapper />}
+                />
                 <Route
                     path="/dashboard"
                     element={
-                      <PrivateRoute isLoggedIn={isLoggedIn}>
-                        <WeatherDashboard />
+                      <PrivateRoute loggedUser={loggedUser}>
+                        <WeatherDashboard loggedUser={loggedUser}/>
                       </PrivateRoute>
                     }
                 />
