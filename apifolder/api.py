@@ -417,7 +417,7 @@ async def deleteUser(currentUser : WeatherLoginUserInfo, userToDelete : WeatherL
         tmp = userToDeleteResult[0]
         userToDeleteStatus = tmp.status
 
-
+        # Admin is able to delete an user (works)
         if currentUserStatus == 'admin' and userToDeleteStatus != 'admin':
             stmt = delete(WeatherLogin).where(WeatherLogin.username == userToDelete.username)
             session.execute(stmt)
@@ -426,14 +426,15 @@ async def deleteUser(currentUser : WeatherLoginUserInfo, userToDelete : WeatherL
                     "message": "User wurde von Admin gelöscht"
                     }
 
+        #An admin is not able to delete hinself, because of his role (works)
         elif currentUserStatus == 'admin' and currentUser.username == userToDelete.username:
             return {"success": False,
                     "message": "Admin darf nicht gelöscht werden"
                     }
 
-
+        #An user is able to delete his own account (works)
         else:
-            stmt = delete(WeatherLogin).where((WeatherLogin.username == currentUser.username) & (WeatherLogin.password == currentUser.password))
+            stmt = delete(WeatherLogin).where(WeatherLogin.username == currentUser.username)
             session.execute(stmt)
             session.commit()
 
@@ -446,14 +447,10 @@ async def deleteUser(currentUser : WeatherLoginUserInfo, userToDelete : WeatherL
 async def updateUser(currentUser : WeatherLoginUserInfo, newUserData : WeatherLoginUserInfo):
     with Session(Engine) as session:
 
-        stmt = select(WeatherLogin.status).where(WeatherLogin.username == currentUser.username)
-        status = session.execute(stmt).first()
 
 
-
-
-        ## Updates the status of an user if the current user is an admin
-        if status == 'admin' and currentUser.username != newUserData.username:
+        ## Updates the status of an user if the current user is an admin (works)
+        if currentUser.status == 'admin' and currentUser.username != newUserData.username:
             stmt = update(WeatherLogin).where(WeatherLogin.username == newUserData.username).values(status = newUserData.status)
             session.execute(stmt)
             session.commit()
@@ -462,19 +459,32 @@ async def updateUser(currentUser : WeatherLoginUserInfo, newUserData : WeatherLo
                    "message": "User wurde von Admin aktualisiert"
             }
 
-        ## Updates a user by that the user wants to change exepts the status -> needs password to confirm identity
+        # Updates the login informations of an user, if the requested new Username is available
+        # If request username or password is empty it remains as before
+        # (works)
         else:
-            stmt = update(WeatherLogin).where((WeatherLogin.username == currentUser.username) & (WeatherLogin.password == currentUser.password)).values(
-            username=newUserData.username,
-            password=newUserData.password
-            )
-            session.execute(stmt)
-            session.commit()
+            CheckExistingstmt = select(WeatherLogin.username).where(WeatherLogin.username == newUserData.username)
 
-        return {
-            "success" : True,
-            "message" : "User [" + currentUser.username + "wurde aktualisiert (jetzt " + newUserData.username + ")"
-        }
+            result = session.execute(CheckExistingstmt).first()
+
+
+
+            if not result:
+                if newUserData.password:
+                    stmt = update(WeatherLogin).where(WeatherLogin.username == currentUser.username).values(password = newUserData.password)
+                    session.execute(stmt)
+                    session.commit()
+
+                if newUserData.username:
+                    stmt = update(WeatherLogin).where(WeatherLogin.username == currentUser.username).values(username = newUserData.username)
+                    session.execute(stmt)
+                    session.commit()
+
+
+            return {
+                "success" : True,
+                "message" : "User hat seine Informationen geändert"
+            }
 
 
 
