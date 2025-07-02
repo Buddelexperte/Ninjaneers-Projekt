@@ -11,6 +11,7 @@ import io
 from sklearn.linear_model import LinearRegression
 from argon2 import PasswordHasher
 from apifolder.hashing import hashPassword, verifyUnhashed
+from typing import List
 
 router = APIRouter()
 app = FastAPI()
@@ -554,6 +555,17 @@ async def getAllUsers():
                 "body": users
                 }
 
+@app.put("/weather/updateUserRoles")
+async def updateUserRoles(users: List[WeatherLoginUserInfo]):
+    with Session(Engine) as session:
+        for user in users:
+            stmt = update(WeatherLogin).where(WeatherLogin.username == user.username).values(role = user.role)
+            session.execute(stmt)
+
+        session.commit()
+        return {"success": True,
+                "message": "Rolle der User wurde verändert"
+                }
 
 
 
