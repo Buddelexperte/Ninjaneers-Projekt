@@ -40,7 +40,7 @@ new_role_set = WeatherUserRole(
     roleTitle = "admin",
 )
 
-session.add(new_role_set)
+#session.add(new_role_set)
 
 new_login_set = WeatherLogin(
     username = 'root',
@@ -48,7 +48,7 @@ new_login_set = WeatherLogin(
     role = 'admin'
 )
 
-#session.add(new_login_set)
+session.add(new_login_set)
 
 
 # Commiting changes

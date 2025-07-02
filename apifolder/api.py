@@ -9,9 +9,12 @@ import base64
 import numpy as np
 import io
 from sklearn.linear_model import LinearRegression
+from argon2 import PasswordHasher
+from apifolder.hashing import hashPassword, verifyUnhashed
 
 router = APIRouter()
 app = FastAPI()
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -79,9 +82,11 @@ def createUser(i_username : str, i_password : str, i_role : str):
         result = session.execute(stmt).first()
 
         if not result:
+            hashedPassword = hashPassword(i_password)
+
             new_login_set = WeatherLogin(
                 username = i_username,
-                password = i_password,
+                password = hashedPassword,
                 role = i_role
             )
 
@@ -358,32 +363,30 @@ async def get_login(entry : WeatherLoginUserInfo):
 
     with Session(Engine) as session:
         stmt = select(WeatherLogin.password).where(WeatherLogin.username == entry.username)
+        tmp = session.execute(stmt).first()
 
-        result = session.execute(stmt).first()
-
-        if not result:
+        if not tmp:
             return {
                 "success": False,
-                "message" : "Kein User mit dem Namen: " + entry.username
+                "message": "Kein User mit dem Namen: " + entry.username
             }
 
-        db_password = result[0]
+        result = tmp[0]
 
-
-
-        if db_password != entry.password:
-            return{
-                "success": False,
-                "message": "Falsches Passwort für: " + entry.username,
-            }
-
-
-
-        elif db_password == entry.password:
+        verification = verifyUnhashed(result, entry.password)
+        if verification["success"]:
             return {
                 "success": True,
-                "message" : "Du bist eingeloggt"
+                "message": "Verifizierung erfolgreich!"
             }
+        else:
+            return verification
+
+
+
+
+
+
 
 @app.post("/weather/signup")
 async def createNewUser(newUserInfo : WeatherLoginUserInfo):

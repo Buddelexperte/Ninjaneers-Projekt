@@ -26,7 +26,7 @@ class WeatherLogin(Base):
 
     id = Column(Integer, primary_key=True)
     username = Column(String(50))
-    password = Column(String(50))
+    password = Column(String(256))
     role = Column(String(50))
 
 class WeatherUserRole(Base):
