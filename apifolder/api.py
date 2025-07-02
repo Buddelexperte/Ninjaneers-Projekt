@@ -90,6 +90,16 @@ def createUser(i_username : str, i_password : str, i_role : str):
             return True
         return False
 
+def checkExistingRole(i_roleTitle : str):
+    with Session(Engine) as session:
+        stmt = select(WeatherUserRole).where(WeatherUserRole.roleTitle == i_roleTitle)
+        checkExistingRole = session.execute(stmt).first()
+
+        if not checkExistingRole:
+            return True
+
+        else:
+            return False
 
 
 @app.get("/")
@@ -498,10 +508,10 @@ async def getRoles():
 @app.post("/weather/createNewRole")
 async def createNewRole(newRole : WeatherUserRoleInfo):
     with Session(Engine) as session:
-        stmt = select(WeatherUserRole).where(WeatherUserRole.roleTitle == newRole.roleTitle)
-        checkExistingRole = session.execute(stmt).first()
 
-        if not checkExistingRole :
+        result = checkExistingRole(newRole.roleTitle)
+
+        if result == True:
             new_role_set = WeatherUserRole(
                 roleTitle = newRole.roleTitle,
 
