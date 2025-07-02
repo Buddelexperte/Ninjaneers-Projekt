@@ -3,7 +3,7 @@ import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo
+from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo, WeatherUserRole, WeatherUserRoleInfo
 from sqlalchemy import select, extract, update, delete
 import base64
 import numpy as np
@@ -485,6 +485,41 @@ async def updateUser(currentUser : WeatherLoginUserInfo, newUserData : WeatherLo
                 "success" : True,
                 "message" : "User hat seine Informationen geändert"
             }
+
+
+@app.get("/weather/getRoles")
+async def getRoles():
+    with Session(Engine) as session:
+        stmt = select(WeatherUserRole)
+        result = session.execute(stmt).scalars().all()
+
+    return result
+
+@app.post("/weather/createNewRole")
+async def createNewRole(newRole : WeatherUserRoleInfo):
+    with Session(Engine) as session:
+        stmt = select(WeatherUserRole).where(WeatherUserRole.roleTitle == newRole.roleTitle)
+        checkExistingRole = session.execute(stmt).first()
+
+        if not checkExistingRole :
+            new_role_set = WeatherUserRole(
+                roleTitle = newRole.roleTitle,
+
+            )
+            session.add(new_role_set)
+            session.commit()
+
+            return {"success": True,
+                    "message": f"Neue Rolle: {newRole.roleTitle} wurde hinzugefügt"
+            }
+
+        else:
+            return {"success": False,
+                    "message": f"Rolle: {newRole.roleTitle} ist bereits vorhanden"
+            }
+
+
+
 
 
 
