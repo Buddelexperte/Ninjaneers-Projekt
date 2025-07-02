@@ -1,6 +1,7 @@
 from datetime import date
 import csv
 from src.settings import session, WeatherInfo, WeatherLogin, WeatherUserRole
+from apifolder.hashing import hashPassword, verifyUnhashed
 
 # Delete all prev records
 session.query(WeatherInfo).delete()
@@ -44,7 +45,7 @@ new_role_set = WeatherUserRole(
 
 new_login_set = WeatherLogin(
     username = 'root',
-    password = str(0000),
+    password = hashPassword("0"),
     role = 'admin'
 )
 
