@@ -374,16 +374,7 @@ async def get_login(entry : WeatherLoginUserInfo):
         result = tmp[0]
 
         verification = verifyUnhashed(result, entry.password)
-        if verification["success"]:
-            return {
-                "success": True,
-                "message": "Verifizierung erfolgreich!"
-            }
-        else:
-            return verification
-
-
-
+        return verification
 
 
 
@@ -530,6 +521,41 @@ async def createNewRole(newRole : WeatherUserRoleInfo):
             return {"success": False,
                     "message": f"Rolle: {newRole.roleTitle} ist bereits vorhanden"
             }
+
+@app.post("/weather/getUserRole")
+async def getUserRole(user : WeatherLoginUserInfo):
+    with Session(Engine) as session:
+        stmt = select(WeatherLogin.role).where(WeatherLogin.username == user.username)
+        result = session.execute(stmt).first()
+
+        role = result[0]
+
+        return {"success": True,
+                "message": f"Rolle des Users: {user.username} -> {role}"
+        }
+
+
+@app.get("/weather/getAllUsers")
+async def getAllUsers():
+    with Session(Engine) as session:
+        stmt = select(WeatherLogin)
+        result = session.execute(stmt).scalars().all()
+
+        users = []
+        for user in result:
+            users.append({
+                "username" : user.username,
+                "role" : user.role
+
+            })
+
+        return {"success": True,
+                "message": "Liste aller User mit Rolle",
+                "body": users
+                }
+
+
+
 
 
 
