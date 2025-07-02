@@ -71,7 +71,7 @@ def updateData(data : WeatherCreate):
         return True
 
 
-def createUser(i_username : str, i_password : str, i_status : str):
+def createUser(i_username : str, i_password : str, i_role : str):
     with Session(Engine) as session:
 
         stmt = select(WeatherLogin.username).where(WeatherLogin.username == i_username)
@@ -82,7 +82,7 @@ def createUser(i_username : str, i_password : str, i_status : str):
             new_login_set = WeatherLogin(
                 username = i_username,
                 password = i_password,
-                status = i_status
+                role = i_role
             )
 
             session.add(new_login_set)
@@ -401,7 +401,7 @@ async def deleteUser(currentUser : WeatherLoginUserInfo, userToDelete : WeatherL
             }
 
         tmp = currentUserResult[0]
-        currentUserStatus = tmp.status
+        currentUserRole = tmp.role
 
         userToDeleteStmt = select(WeatherLogin).where(WeatherLogin.username == userToDelete.username)
         userToDeleteResult = session.execute(userToDeleteStmt).first()
@@ -415,10 +415,10 @@ async def deleteUser(currentUser : WeatherLoginUserInfo, userToDelete : WeatherL
 
 
         tmp = userToDeleteResult[0]
-        userToDeleteStatus = tmp.status
+        userToDeleteRole = tmp.role
 
         # Admin is able to delete an user (works)
-        if currentUserStatus == 'admin' and userToDeleteStatus != 'admin':
+        if currentUserRole == 'admin' and userToDeleteRole != 'admin':
             stmt = delete(WeatherLogin).where(WeatherLogin.username == userToDelete.username)
             session.execute(stmt)
             session.commit()
@@ -426,8 +426,8 @@ async def deleteUser(currentUser : WeatherLoginUserInfo, userToDelete : WeatherL
                     "message": "User wurde von Admin gelöscht"
                     }
 
-        #An admin is not able to delete hinself, because of his role (works)
-        elif currentUserStatus == 'admin' and currentUser.username == userToDelete.username:
+        #An admin is not able to delete himself, because of his role (works)
+        elif currentUserRole == 'admin' and currentUser.username == userToDelete.username:
             return {"success": False,
                     "message": "Admin darf nicht gelöscht werden"
                     }
@@ -449,9 +449,9 @@ async def updateUser(currentUser : WeatherLoginUserInfo, newUserData : WeatherLo
 
 
 
-        ## Updates the status of an user if the current user is an admin (works)
-        if currentUser.status == 'admin' and currentUser.username != newUserData.username:
-            stmt = update(WeatherLogin).where(WeatherLogin.username == newUserData.username).values(status = newUserData.status)
+        ## Updates the role of an user if the current user is an admin (works)
+        if currentUser.role == 'admin' and currentUser.username != newUserData.username:
+            stmt = update(WeatherLogin).where(WeatherLogin.username == newUserData.username).values(role = newUserData.role)
             session.execute(stmt)
             session.commit()
 

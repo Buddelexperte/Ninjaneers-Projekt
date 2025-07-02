@@ -39,7 +39,7 @@ for row in rows:
 new_login_set = WeatherLogin(
     username = 'root',
     password = str(0000),
-    status = 'admin'
+    role = 'admin'
 )
 
 session.add(new_login_set)
