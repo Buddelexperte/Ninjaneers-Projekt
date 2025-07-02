@@ -38,7 +38,8 @@ function WeatherDashboard({loggedUser}) {
   }
 
   const usernamePlaceholder = loggedUser?.username || "Enter new username";
-  const isAdmin = isLoggedAsAdmin();
+
+
 
   const PROFILE_FIELDS = [
     { label: "Username:", key: "newUsername", type: "text", placeholder: usernamePlaceholder },
@@ -234,14 +235,14 @@ function WeatherDashboard({loggedUser}) {
             <User size={40}/>
           </button>
 
-          {true ??
+          { ?? (
             <button
               className="left-title-icon"
               onClick={() => onAdminViewClick()}
             >
               <Users size={40}/>
             </button>
-          }
+          )}
 
         </div>
         <h1 className="title">Weather Dashboard</h1>
