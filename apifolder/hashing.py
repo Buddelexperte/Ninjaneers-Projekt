@@ -12,17 +12,11 @@ def hashPassword(password: str):
 def verifyUnhashed(hashedPassword: str, password: str):
     try:
         ph.verify(hashedPassword, password)
-        return {
-            "success": True,
-            "message": "Password korrekt",
-        }
+        #return {"success": True}
+        return True
     except VerifyMismatchError:
-        return {
-            "success": False,
-            "message": "Falsches Passwort"
-                }
+        #return {"success": False, "message": "Falsches Passwort"}
+        return False
     except Exception as e:
-        return {
-            "success": False,
-            "message": str(e)
-        }
+        #return {"success": False, "message": str(e)}
+        return False

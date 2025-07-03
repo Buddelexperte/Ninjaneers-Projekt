@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 import matplotlib.pyplot as universal_diagram
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends, Body
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from apifolder.hashing import hashPassword, verifyUnhashed
@@ -11,6 +11,11 @@ import base64
 import numpy as np
 import io
 from sklearn.linear_model import LinearRegression
+from argon2 import PasswordHasher
+from apifolder.hashing import hashPassword, verifyUnhashed
+from apifolder.token import createPayload, create_encrypted_token, decrypt_token, get_current_user_by_token
+
+from typing import List
 
 router = APIRouter()
 app = FastAPI()
@@ -73,7 +78,7 @@ def updateData(data : WeatherCreate):
 
         return True
 
-
+# USer darf nicht erstelle werden, wenn es die rolle nicht gibt
 def createUser(i_username : str, i_password : str, i_role : str):
     with Session(Engine) as session:
 
@@ -106,6 +111,13 @@ def checkExistingRole(i_roleTitle : str):
         else:
             return False
 
+def getUserRoleF(user : WeatherLoginUserInfo):
+    with Session(Engine) as session:
+        stmt = select(WeatherLogin.role).where(WeatherLogin.username == user.username)
+        result = session.execute(stmt).first()
+
+        role = result[0]
+        return role
 
 @app.get("/")
 async def root():
@@ -374,7 +386,26 @@ async def get_login(entry : WeatherLoginUserInfo):
         result = tmp[0]
 
         verification = verifyUnhashed(result, entry.password)
-        return verification
+        if verification is True:
+            role = getUserRoleF(entry)
+            entry.role = role
+            print(role)
+
+            encrypted_token = create_encrypted_token(entry) #encrypted_token = string
+            print(decrypt_token(encrypted_token))
+            return {"success": True,
+                    "message" : "Encrypted Token: ",
+                    "body": {"access_token": encrypted_token,
+                             "token_type": "bearer"
+                    }
+            }
+        else:
+            return {"success": False,
+                    "message" : "Fehler bei der Anmeldung"
+                    }
+
+
+
 
 
 @app.post("/weather/signup")
@@ -391,7 +422,7 @@ async def createNewUser(newUserInfo : WeatherLoginUserInfo):
     }
 
 @app.post("/weather/deleteUser")
-async def deleteUser(currentUser : WeatherLoginUserInfo, userToDelete : WeatherLoginUserInfo ):
+async def deleteUser(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), userToDelete : WeatherLoginUserInfo = Body() ):
     with Session(Engine) as session:
         currentUserStmt = select(WeatherLogin).where(WeatherLogin.username == currentUser.username)
         currentUserResult = session.execute(currentUserStmt).first()
@@ -446,11 +477,7 @@ async def deleteUser(currentUser : WeatherLoginUserInfo, userToDelete : WeatherL
             }
 
 @app.put("/weather/updateUser")
-async def updateUser(data : UserRequest):
-
-    currentUser = data.currentUser
-    newUserData = data.newUserData
-
+async def updateUser(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), newUserData : WeatherLoginUserInfo = Body()):
     with Session(Engine) as session:
 
 
@@ -500,79 +527,97 @@ async def updateUser(data : UserRequest):
 
 
 @app.get("/weather/getRoles")
-async def getRoles():
-    with Session(Engine) as session:
-        stmt = select(WeatherUserRole)
-        result = session.execute(stmt).scalars().all()
+async def getRoles(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token)):
+    if currentUser.role == 'admin':
+        with Session(Engine) as session:
+            stmt = select(WeatherUserRole)
+            result = session.execute(stmt).scalars().all()
 
-    return result
+        return result
+    else:
+        return {"success": False,
+                "message": "Kein Admin"
+                }
 
 @app.post("/weather/createNewRole")
-async def createNewRole(newRole : WeatherUserRoleInfo):
-    with Session(Engine) as session:
+async def createNewRole(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), newRole : WeatherUserRoleInfo = Body()):
+    if currentUser.role == 'admin':
 
-        result = checkExistingRole(newRole.roleTitle)
+        with Session(Engine) as session:
 
-        if result == True:
-            new_role_set = WeatherUserRole(
-                roleTitle = newRole.roleTitle,
+            result = checkExistingRole(newRole.roleTitle)
 
-            )
-            session.add(new_role_set)
-            session.commit()
+            if result == True:
+                new_role_set = WeatherUserRole(
+                    roleTitle = newRole.roleTitle,
 
-            return {"success": True,
-                    "message": f"Neue Rolle: {newRole.roleTitle} wurde hinzugefügt"
-            }
+                )
+                session.add(new_role_set)
+                session.commit()
 
-        else:
-            return {"success": False,
-                    "message": f"Rolle: {newRole.roleTitle} ist bereits vorhanden"
-            }
+                return {"success": True,
+                        "message": f"Neue Rolle: {newRole.roleTitle} wurde hinzugefügt"
+                }
+
+            else:
+                return {"success": False,
+                        "message": f"Rolle: {newRole.roleTitle} ist bereits vorhanden"
+                }
+
+    else:
+        return {"success": False,
+                "message" : "Kein Admin"
+                }
+
 
 @app.post("/weather/getUserRole")
 async def getUserRole(user : WeatherLoginUserInfo):
-    with Session(Engine) as session:
-        stmt = select(WeatherLogin.role).where(WeatherLogin.username == user.username)
-        result = session.execute(stmt).first()
-
-        role = result[0]
+        role = getUserRole(user.username)
 
         return {"success": True,
-                "message": f"Rolle des Users: {user.username} -> {role}",
-                "body": role,
+                "message": f"Rolle des Users:",
+                "body" : role
         }
 
 
 @app.get("/weather/getAllUsers")
-async def getAllUsers():
-    with Session(Engine) as session:
-        stmt = select(WeatherLogin)
-        result = session.execute(stmt).scalars().all()
+async def getAllUsers(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token)):
+    if currentUser.role == 'admin':
+        with Session(Engine) as session:
+            stmt = select(WeatherLogin)
+            result = session.execute(stmt).scalars().all()
 
-        users = []
-        for user in result:
-            users.append({
-                "username" : user.username,
-                "role" : user.role
+            users = []
+            for user in result:
+                users.append({
+                    "username" : user.username,
+                    "role" : user.role
+                })
+            return {"success": True,
+                    "message": "Liste aller User mit Rolle",
+                    "body": users
+                    }
 
-            })
-
-        return {"success": True,
-                "message": "Liste aller User mit Rolle",
-                "body": users
+    else:
+        return {"success": False,
+                "message": "Kein Admin"
                 }
 
 @app.put("/weather/updateUserRoles")
-async def updateUserRoles(users: List[WeatherLoginUserInfo]):
-    with Session(Engine) as session:
-        for user in users:
-            stmt = update(WeatherLogin).where(WeatherLogin.username == user.username).values(role = user.role)
-            session.execute(stmt)
+async def updateUserRoles(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), users: List[WeatherLoginUserInfo] = Body()):
+    if currentUser == "admin":
+        with Session(Engine) as session:
+            for user in users:
+                stmt = update(WeatherLogin).where(WeatherLogin.username == user.username).values(role = user.role)
+                session.execute(stmt)
 
-        session.commit()
-        return {"success": True,
-                "message": "Rolle der User wurde verändert"
+            session.commit()
+            return {"success": True,
+                    "message": "Rolle der User wurde verändert"
+                    }
+    else:
+        return {"success": False,
+                "message" : "Kein Admin"
                 }
 
 
