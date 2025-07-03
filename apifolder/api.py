@@ -613,6 +613,14 @@ async def updateUserRoles(currentUser : WeatherLoginUserInfo = Depends(get_curre
                 }
 
 
+@app.get("/weather/getPersonalInfo")
+async def getPersonalInfo(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token)):
+
+
+    return {"success": True,
+            "message ": "Userinfos",
+            "Body": {"username" : currentUser.username, "role" : currentUser.role}
+            }
 
 
 
