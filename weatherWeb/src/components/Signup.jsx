@@ -1,6 +1,15 @@
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
-import {apiRequest} from "./requestHandler.js";
+import { apiRequest } from "./requestHandler.js";
+
+function Control({ label, children }) {
+  return (
+    <div className="form-row">
+      {label && <label className="input-label">{label}</label>}
+      {children}
+    </div>
+  );
+}
 
 class Signup extends Component {
   constructor(props) {
@@ -26,63 +35,67 @@ class Signup extends Component {
       return;
     }
 
-    const res = await apiRequest(
-        "signup",
-        {
-          method: "POST",
-          body : { username, password, role }})
+    const res = await apiRequest("signup", false, {
+      method: "POST",
+      body: { username, password, role },
+    });
 
-      if (res.success)
-      {
-        this.props.navigate("/");
-      }
-      else
-      {
-        alert(res.message || "Unknown signup error");
-      }
+    if (res.success) {
+      this.props.navigate("/");
+    } else {
+      alert(res.message || "Unknown signup error");
+    }
   };
 
   render() {
+    const { username, password, rep_password } = this.state;
+
+    const SIGNUP_FIELDS = [
+      {
+        label: "Username:",
+        key: "username",
+        type: "text",
+        value: username,
+        placeholder: "Enter your username",
+      },
+      {
+        label: "Password:",
+        key: "password",
+        type: "password",
+        value: password,
+        placeholder: "Enter your password",
+      },
+      {
+        label: "Repeat Password:",
+        key: "rep_password",
+        type: "password",
+        value: rep_password,
+        placeholder: "Repeat your password",
+      },
+    ];
+
     return (
       <div className="modal-overlay">
         <div className="modal-content">
           <h2>Sign up for Weather Dashboard</h2>
           <form onSubmit={this.handleSubmit}>
-            <div className="form-row">
-              <label className="input-label">Username:</label>
-              <input
-                name="username"
-                type="text"
-                className="form-input-stretch"
-                value={this.state.username}
-                onChange={this.handleChange}
-                required
-              />
-            </div>
-            <div className="form-row">
-              <label className="input-label">Password:</label>
-              <input
-                name="password"
-                type="password"
-                className="form-input-stretch"
-                value={this.state.password}
-                onChange={this.handleChange}
-                required
-              />
-            </div>
-            <div className="form-row">
-              <label className="input-label">Repeat Password:</label>
-              <input
-                name="rep_password"
-                type="password"
-                className="form-input-stretch"
-                value={this.state.rep_password}
-                onChange={this.handleChange}
-                required
-              />
-            </div>
+            {SIGNUP_FIELDS.map(({ label, key, type, value, placeholder }) => (
+              <Control key={key} label={label}>
+                <input
+                  name={key}
+                  type={type}
+                  className="form-input-stretch"
+                  value={value}
+                  placeholder={placeholder}
+                  onChange={this.handleChange}
+                  required
+                />
+              </Control>
+            ))}
             <div className="login-signup">
-              <button type="submit" className="standalone-btn">Sign Up</button>
+              <button type="submit" className="standalone-btn">
+                Sign Up
+              </button>
               <p>
                 or <Link to="/">log into existing account</Link>
               </p>

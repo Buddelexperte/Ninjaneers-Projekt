@@ -1,19 +1,18 @@
 from datetime import date, timedelta
+from fastapi import Body, Depends
 import matplotlib.pyplot as universal_diagram
-from fastapi import FastAPI, APIRouter, Depends, Body
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
-from apifolder.hashing import hashPassword, verifyUnhashed
-from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo, UserRequest
+from pandas.core.indexes.multi import names_compat
+
 from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo, WeatherUserRole, WeatherUserRoleInfo
 from sqlalchemy import select, extract, update, delete
 import base64
 import numpy as np
 import io
 from sklearn.linear_model import LinearRegression
-from argon2 import PasswordHasher
 from apifolder.hashing import hashPassword, verifyUnhashed
-from apifolder.token import createPayload, create_encrypted_token, decrypt_token, get_current_user_by_token
+from apifolder.token import create_encrypted_token, decrypt_token, get_current_user_by_token
 
 from typing import List
 
@@ -111,7 +110,7 @@ def checkExistingRole(i_roleTitle : str):
         else:
             return False
 
-def getUserRoleF(user : WeatherLoginUserInfo):
+def getRoleForUser(user : WeatherLoginUserInfo):
     with Session(Engine) as session:
         stmt = select(WeatherLogin.role).where(WeatherLogin.username == user.username)
         result = session.execute(stmt).first()
@@ -127,6 +126,7 @@ async def root():
 async def get_info():
     with Session(Engine) as session:
         statement = select(WeatherInfo)
+
         res = session.execute(statement).mappings().all()
     return res
 
@@ -380,32 +380,34 @@ async def get_login(entry : WeatherLoginUserInfo):
         if not tmp:
             return {
                 "success": False,
-                "message": "Kein User mit dem Namen: " + entry.username
+                "message": "Kein User mit dem Namen: " + entry.username,
+                "error" : "name-not-found",
             }
 
         result = tmp[0]
 
         verification = verifyUnhashed(result, entry.password)
         if verification is True:
-            role = getUserRoleF(entry)
+            role = getRoleForUser(entry)
             entry.role = role
             print(role)
 
             encrypted_token = create_encrypted_token(entry) #encrypted_token = string
             print(decrypt_token(encrypted_token))
-            return {"success": True,
-                    "message" : "Encrypted Token: ",
-                    "body": {"access_token": encrypted_token,
-                             "token_type": "bearer"
-                    }
+            return {
+                "success": True,
+                "message" : "Verfied login!",
+                "body": {
+                    "access_token": encrypted_token,
+                    "token_type": "bearer"
+                }
             }
         else:
-            return {"success": False,
-                    "message" : "Fehler bei der Anmeldung"
-                    }
-
-
-
+            return {
+                "success": False,
+                "message" : "Fehler bei der Anmeldung",
+                "error" : "pw-mismatch",
+            }
 
 
 @app.post("/weather/signup")
@@ -445,8 +447,6 @@ async def deleteUser(currentUser : WeatherLoginUserInfo = Depends(get_current_us
                 "message": f"User '{userToDelete.username}' existiert nicht und kann nicht gelöscht werden."
             }
 
-
-
         tmp = userToDeleteResult[0]
         userToDeleteRole = tmp.role
 
@@ -480,15 +480,19 @@ async def deleteUser(currentUser : WeatherLoginUserInfo = Depends(get_current_us
 async def updateUser(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), newUserData : WeatherLoginUserInfo = Body()):
     with Session(Engine) as session:
 
+        ## Updates the role of a user if the current user is an admin (works)
+        is_admin = (currentUser.role == 'admin')
+        role_got_passed = newUserData.role != ""
 
 
-        ## Updates the role of an user if the current user is an admin (works)
-        if currentUser.role == 'admin' and currentUser.username != newUserData.username:
-            stmt = update(WeatherLogin).where(WeatherLogin.username == newUserData.username).values(role = newUserData.role)
+        if is_admin and role_got_passed:
+            stmt = update(WeatherLogin).where(WeatherLogin.username == newUserData.username).values(
+                role=newUserData.role)
+
             session.execute(stmt)
             session.commit()
 
-            return{
+            return {
                 "success": True,
                 "message": "User Rolle wurde von Admin aktualisiert"
             }
@@ -496,35 +500,52 @@ async def updateUser(currentUser : WeatherLoginUserInfo = Depends(get_current_us
         # Updates the login informations of an user, if the requested new Username is available
         # If request username or password is empty it remains as before
         # (works)
-        else:
-            CheckExistingstmt = select(WeatherLogin.username).where(WeatherLogin.username == newUserData.username)
 
-            result = session.execute(CheckExistingstmt).first()
+        names_equal = currentUser.username == newUserData.username
 
 
+        if not names_equal:
+            stmt = select(WeatherLogin.username).where(WeatherLogin.username == newUserData.username)
+            result = session.execute(stmt).first()
 
-            if not result:
-                if newUserData.password:
-                    stmt = update(WeatherLogin).where(WeatherLogin.username == currentUser.username).values(password = newUserData.password)
-                    session.execute(stmt)
-                    session.commit()
-
-                if newUserData.username:
-                    stmt = update(WeatherLogin).where(WeatherLogin.username == currentUser.username).values(username = newUserData.username)
-                    session.execute(stmt)
-                    session.commit()
-
-
+            if result:
                 return {
-                    "success" : True,
-                    "message" : "User hat seine Informationen geändert"
+                    "success": False,
+                    "message": "Name bereits vorhanden, Vorgang abgebrochen",
                 }
 
-            return {
-                "success": False,
-                "message" : "Kein Eintrag zum aktualisieren gefunden",
-            }
 
+
+        newUser = currentUser # Save new user info for new token
+
+
+        # No user with given name
+        if newUserData.password:
+            hashedPassword = hashPassword(newUserData.password)
+            stmt = update(WeatherLogin).where(WeatherLogin.username == currentUser.username).values(password = hashedPassword)
+            session.execute(stmt)
+
+            newUser.password = hashedPassword
+
+        if newUserData.username:
+            stmt = update(WeatherLogin).where(WeatherLogin.username == currentUser.username).values(username = newUserData.username)
+            session.execute(stmt)
+
+            newUser.username = newUserData.username
+
+        session.commit()
+
+
+        newUser.role = currentUser.role
+        encrypted_token = create_encrypted_token(newUser)
+
+        return {
+            "success" : True,
+            "message" : "User hat seine Informationen geändert",
+            "body": {
+                        "newToken": encrypted_token,
+            },
+        }
 
 @app.get("/weather/getRoles")
 async def getRoles(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token)):
@@ -533,7 +554,11 @@ async def getRoles(currentUser : WeatherLoginUserInfo = Depends(get_current_user
             stmt = select(WeatherUserRole)
             result = session.execute(stmt).scalars().all()
 
-        return result
+        return {
+            "success" : True,
+            "message" : "Rollen im body ausgegeben",
+            "body" : result,
+        }
     else:
         return {"success": False,
                 "message": "Kein Admin"
@@ -572,11 +597,11 @@ async def createNewRole(currentUser : WeatherLoginUserInfo = Depends(get_current
 
 @app.post("/weather/getUserRole")
 async def getUserRole(user : WeatherLoginUserInfo):
-        role = getUserRole(user.username)
+        role = getRoleForUser(user)
 
         return {"success": True,
-                "message": f"Rolle des Users:",
-                "body" : role
+                "message": f"Rolle des Users: {user.username} -> {role}",
+                "body": {"role" : role},
         }
 
 
@@ -605,7 +630,7 @@ async def getAllUsers(currentUser : WeatherLoginUserInfo = Depends(get_current_u
 
 @app.put("/weather/updateUserRoles")
 async def updateUserRoles(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), users: List[WeatherLoginUserInfo] = Body()):
-    if currentUser == "admin":
+    if currentUser.role == "admin":
         with Session(Engine) as session:
             for user in users:
                 stmt = update(WeatherLogin).where(WeatherLogin.username == user.username).values(role = user.role)
@@ -624,14 +649,10 @@ async def updateUserRoles(currentUser : WeatherLoginUserInfo = Depends(get_curre
 @app.get("/weather/getPersonalInfo")
 async def getPersonalInfo(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token)):
 
-
     return {"success": True,
             "message ": "Userinfos",
-            "Body": {"username" : currentUser.username, "role" : currentUser.role}
+            "body": {"username" : currentUser.username, "role" : currentUser.role}
             }
-
-
-
 
 
 

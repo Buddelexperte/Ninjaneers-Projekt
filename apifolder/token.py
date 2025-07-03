@@ -8,8 +8,6 @@ from src.settings import WeatherLoginUserInfo,WeatherLogin
 from fastapi import Security, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-
-
 SECRET_KEY = os.urandom(16)
 ALGORITHM = "HS256" #encoding algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
@@ -36,7 +34,7 @@ def create_encrypted_token(user: WeatherLoginUserInfo) -> str:
 #credits chatgpt
 def decrypt_token(token: str) -> dict:
     decrypted_bytes = jwe.decrypt(token, SECRET_KEY)  # 1. Entschlüsseln des Tokens, Ergebnis sind Bytes
-    decrypted_str = decrypted_bytes.decode()# 2. Bytes zurück in String umwandeln (JSON)
+    decrypted_str = decrypted_bytes.decode() # 2. Bytes zurück in String umwandeln (JSON)
     data = json.loads(decrypted_str)                   # 3. JSON-String in Python-Dict parsen und zurückgeben
     userInfo = WeatherLoginUserInfo(username=data.get("sub"), password="", role=data.get("role"))
 

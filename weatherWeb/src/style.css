@@ -4,7 +4,7 @@ body {
   color: #333;
 }
 
-body div, input {
+body div, input, .dropdown {
   border-radius: 8px;
 }
 
@@ -85,29 +85,58 @@ th {
   flex-wrap: nowrap;
 }
 
-.weather-table-wrapper {
+.table-wrapper {
   position: sticky;
   top: 1.2rem;
   flex: 1;
-  height: auto;
+  max-height: 500px;
+}
+
+.admin-user-table-wrapper {
+  position: sticky;
+  top: 1.2rem;
+  flex: 1;
+  max-height: 250px;
 }
 
 .scrollable-div {
-  max-height: 600px;
   overflow-y: auto;
   overflow-x: auto;
   border: 1px solid #ccc;
   border-radius: 8px;
+  max-height: inherit;
 }
 
-.weather-table {
+.data-table {
   width: 100%;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
 }
 
-.weather-table thead th {
+.admin-user-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  max-height: 200px;
+}
+
+.admin-user-table thead th{
+  position: sticky;
+  background-color: #f9f8f8;
+  border-bottom: 1px solid #ccc;
+  padding: 8px;
+  word-wrap: break-word;
+}
+
+.admin-user-table td{
+  padding: 8px;
+  border-top: 1px solid #ccc;
+  word-wrap: break-word;
+}
+
+.data-table thead th {
   position: sticky;
   background-color: #f9f8f8;
   border-bottom: 1px solid #ccc;
@@ -116,9 +145,9 @@ th {
   word-wrap: break-word;
 }
 
-.weather-table td{
+.data-table td{
   padding: 15px;
-  border-bottom: 1px solid #ccc;
+  border-top: 1px solid #ccc;
   text-align: center;
   word-wrap: break-word;
 }
@@ -250,9 +279,10 @@ th {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0.5rem;
   margin: 0 4px;
+  padding: 0.5rem;
   vertical-align: middle;
+  horiz-align: center;
 }
 
 .icon-btn:hover svg {
@@ -299,3 +329,33 @@ th {
   display: flex;
   gap: 1rem;
 }
+
+.action-cell {
+  text-align: center;
+}
+
+.no-interact {
+  pointer-events: none;
+}
+
+.danger-btn {
+  background-color: red;
+  transition: 0.2s ease-in background-color;
+}
+
+.danger-btn:hover {
+  background-color: #b30000;
+  box-shadow: 0 0 10px #b30000;
+}
+
+.disabled-btn {
+  background-color: #777777;
+  transition: 0.2s ease-in background-color;
+  font-size: 12px;
+}
+
+.disabled-btn:hover {
+  background-color: #636363;
+  box-shadow: 0 0 10px #636363;
+}
+

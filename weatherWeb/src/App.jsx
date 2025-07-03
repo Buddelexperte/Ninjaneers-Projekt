@@ -14,18 +14,18 @@ const LoginWithNavigation = ({ onLoginSuccess }) => {
   }} />;
 };
 
-const PrivateRoute = ({ loggedUser, children }) => {
-    if (!loggedUser.username) {
+const PrivateRoute = ({ token, children }) => {
+    if (!token) {
     return <Navigate to="/" replace />;
   }
   return children;
 };
 
 function App() {
-    const [loggedUser, setLoggedUser] = useState({"username" : ""});
+    const [loginToken, setLoginToken] = useState("");
 
-    const handleLoginSuccess = (data) => {
-        setLoggedUser(data);
+    const handleLoginSuccess = (token) => {
+        setLoginToken(token);
     };
 
     return (
@@ -44,8 +44,8 @@ function App() {
                 <Route
                     path="/dashboard"
                     element={
-                      <PrivateRoute loggedUser={loggedUser}>
-                        <WeatherDashboard loggedUser={loggedUser}/>
+                      <PrivateRoute token={loginToken}>
+                        <WeatherDashboard login={{"token": loginToken}} setToken={setLoginToken}/>
                       </PrivateRoute>
                     }
                 />

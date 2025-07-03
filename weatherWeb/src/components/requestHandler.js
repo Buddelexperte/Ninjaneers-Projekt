@@ -1,6 +1,6 @@
 const URL_BASE = "http://localhost:8000/weather/";
 
-export async function apiRequest(endpoint, {
+export async function apiRequest(endpoint, token_access,{
   method = 'GET',
   body = null,
   headers = {},
@@ -11,9 +11,11 @@ export async function apiRequest(endpoint, {
       method,
       mode: "cors",
       headers: {
+          ...(token_access ? { Authorization: `Bearer ${token_access}` } : {}),
           'Content-Type': 'application/json',
           ...headers,
-      },
+      }
+
   };
 
   if (body) {

@@ -334,42 +334,42 @@ function Wd_table() {
           </div>
         </div>
 
-        <div className="weather-table-wrapper">
+        <div className="table-wrapper">
             <div className="scrollable-div">
-            <table className="weather-table">
-              <thead>
-                <tr>
-                  {COLUMNS.map((col) => (
-                    <th key={col.key} className="sortable" onClick={() => handleSort(col.key)}>
-                      {col.label}
-                      {sortConfig.col === col.key ? (sortConfig.dir === "asc" ? " ▲" : " ▼") : ""}
-                    </th>
-                  ))}
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedData().map((entry) => {
-                  const row = entry.WeatherInfo || entry;
-                  return (
-                    <tr className="table-body-row" key={row.id}>
-                      {COLUMNS.map((col) => (
-                        <td key={col.key}>{row[col.key]}</td>
-                      ))}
-                      <td className="action-cell">
-                        <button onClick={() => handleEdit(row)} className="icon-btn" title="Edit">
-                          <Pencil size={18} />
-                        </button>
-                        <button onClick={() => handleDelete(row.id)} className="icon-btn" title="Delete">
-                          <Trash2 size={18} color="red" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-              </div>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    {COLUMNS.map((col) => (
+                      <th key={col.key} className="sortable" onClick={() => handleSort(col.key)}>
+                        {col.label}
+                        {sortConfig.col === col.key ? (sortConfig.dir === "asc" ? " ▲" : " ▼") : ""}
+                      </th>
+                    ))}
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedData().map((entry) => {
+                    const row = entry.WeatherInfo || entry;
+                    return (
+                      <tr key={row.id}>
+                        {COLUMNS.map((col) => (
+                          <td key={col.key}>{row[col.key]}</td>
+                        ))}
+                        <td className="action-cell">
+                          <button onClick={() => handleEdit(row)} className="icon-btn" title="Edit">
+                            <Pencil size={18} />
+                          </button>
+                          <button onClick={() => handleDelete(row.id)} className="icon-btn" title="Delete">
+                            <Trash2 size={18} color="red" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
       </div>
       {isInsertModalOpen && (
