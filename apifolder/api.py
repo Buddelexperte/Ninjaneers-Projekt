@@ -1,6 +1,6 @@
 from datetime import date, timedelta, datetime
 import matplotlib.pyplot as universal_diagram
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends, Body
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo, WeatherUserRole, WeatherUserRoleInfo
@@ -11,6 +11,8 @@ import io
 from sklearn.linear_model import LinearRegression
 from argon2 import PasswordHasher
 from apifolder.hashing import hashPassword, verifyUnhashed
+from apifolder.token import createPayload, create_encrypted_token, decrypt_token, get_current_user_by_token
+
 from typing import List
 
 router = APIRouter()
@@ -74,7 +76,7 @@ def updateData(data : WeatherCreate):
 
         return True
 
-
+# USer darf nicht erstelle werden, wenn es die rolle nicht gibt
 def createUser(i_username : str, i_password : str, i_role : str):
     with Session(Engine) as session:
 
@@ -107,6 +109,13 @@ def checkExistingRole(i_roleTitle : str):
         else:
             return False
 
+def getUserRoleF(user : WeatherLoginUserInfo):
+    with Session(Engine) as session:
+        stmt = select(WeatherLogin.role).where(WeatherLogin.username == user.username)
+        result = session.execute(stmt).first()
+
+        role = result[0]
+        return role
 
 @app.get("/")
 async def root():
@@ -375,7 +384,22 @@ async def get_login(entry : WeatherLoginUserInfo):
         result = tmp[0]
 
         verification = verifyUnhashed(result, entry.password)
-        return verification
+        if verification is True:
+            role = getUserRoleF(entry)
+            entry.role = role
+            print(role)
+
+            encrypted_token = create_encrypted_token(entry) #encrypted_token = string
+            print(decrypt_token(encrypted_token))
+            return {"success": True,
+                    "message" : "Encrypted Token: ",
+                    "body": encrypted_token
+                    }
+        else:
+            return {"success": False,
+                    "message" : "Fehler bei der Anmeldung"
+                    }
+
 
 
 
@@ -449,7 +473,7 @@ async def deleteUser(currentUser : WeatherLoginUserInfo, userToDelete : WeatherL
             }
 
 @app.put("/weather/updateUser")
-async def updateUser(currentUser : WeatherLoginUserInfo, newUserData : WeatherLoginUserInfo):
+async def updateUser(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), newUserData : WeatherLoginUserInfo = Body()):
     with Session(Engine) as session:
 
 
@@ -525,14 +549,11 @@ async def createNewRole(newRole : WeatherUserRoleInfo):
 
 @app.post("/weather/getUserRole")
 async def getUserRole(user : WeatherLoginUserInfo):
-    with Session(Engine) as session:
-        stmt = select(WeatherLogin.role).where(WeatherLogin.username == user.username)
-        result = session.execute(stmt).first()
-
-        role = result[0]
+        role = getUserRole(user.username)
 
         return {"success": True,
-                "message": f"Rolle des Users: {user.username} -> {role}"
+                "message": f"Rolle des Users:",
+                "body" : role
         }
 
 
