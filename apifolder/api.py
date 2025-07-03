@@ -575,7 +575,6 @@ async def getUserRole(user : WeatherLoginUserInfo):
 @app.get("/weather/getAllUsers")
 async def getAllUsers(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token)):
     if currentUser.role == 'admin':
-
         with Session(Engine) as session:
             stmt = select(WeatherLogin)
             result = session.execute(stmt).scalars().all()
