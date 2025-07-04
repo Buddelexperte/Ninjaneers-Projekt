@@ -76,6 +76,7 @@ def start_uvicorn():
 
 def open_browser():
     url = "http://localhost:5173/"
+    print("Opening browser...")
     time.sleep(2)
     webbrowser.open(url)
 
