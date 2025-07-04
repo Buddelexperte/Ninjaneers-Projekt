@@ -30,24 +30,36 @@ export async function apiRequest(endpoint, token_access,{
           // Try to parse error message from response
           let errorMsg;
           try {
-            const errorData = await response.json();
-            errorMsg = errorData.message || response.statusText;
+              const errorData = await response.json();
+              errorMsg = errorData.message || response.statusText;
           } catch {
-            errorMsg = response.statusText;
+              errorMsg = response.statusText;
           }
-          throw new Error(`API error: ${errorMsg}`);
+
+          if (response.status === 401)
+          {
+              console.warn("Unauthorized – loginToken expired");
+              alert("Session abgelaufen, bitte melden Sie sich erneut an")
+
+              window.location.href = "/";
+          }
+
+          return {
+              "success" : false,
+              "message" : errorMsg,
+              "reason" : response.status,
+          }
       }
 
-    // Try to parse response JSON, fallback to text
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json'))
-    {
-        return await response.json();
-    }
-    return await response.text();
+      // Try to parse response JSON, fallback to text
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json'))
+      {
+          return await response.json();
+      }
+      return await response.text();
 
   } catch (error) {
-      // You can add logging here or rethrow
       console.error('API Request Failed:', error);
       throw error;
   }

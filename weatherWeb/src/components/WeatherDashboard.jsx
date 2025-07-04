@@ -181,9 +181,9 @@ function WeatherDashboard({login, setToken}) {
         newPassword: "",
         repNewPassword: "",
       }));
+      alert("Passwort wurde nicht korrekt wiederholt!")
       return;
     }
-
 
     const res = await apiRequest(
         "updateUser",
@@ -205,6 +205,8 @@ function WeatherDashboard({login, setToken}) {
       closeModal()
       return
     }
+
+    alert(res.message)
 
     setProfileFormData(defaultProfileFormData);
   };
@@ -360,6 +362,7 @@ function WeatherDashboard({login, setToken}) {
 
   useEffect(() => {
     fetchOwnInfo();
+    fetchUsers();
   }, [login]);
 
   return (

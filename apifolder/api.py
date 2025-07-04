@@ -5,7 +5,7 @@ from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from pandas.core.indexes.multi import names_compat
 
-from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo, WeatherUserRole, WeatherUserRoleInfo
+from src.settings import engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo, WeatherUserRole, WeatherUserRoleInfo
 from sqlalchemy import select, extract, update, delete
 import base64
 import numpy as np
@@ -57,7 +57,7 @@ def switch_label(type: str):
 
 def updateData(data : WeatherCreate):
 
-    with Session(Engine) as session:
+    with Session(engine) as session:
 
 
         stmt = (update(WeatherInfo).where(WeatherInfo.id == data.i_id).values(
@@ -79,7 +79,7 @@ def updateData(data : WeatherCreate):
 
 # USer darf nicht erstelle werden, wenn es die rolle nicht gibt
 def createUser(i_username : str, i_password : str, i_role : str):
-    with Session(Engine) as session:
+    with Session(engine) as session:
 
         stmt = select(WeatherLogin.username).where(WeatherLogin.username == i_username)
 
@@ -100,7 +100,7 @@ def createUser(i_username : str, i_password : str, i_role : str):
         return False
 
 def checkExistingRole(i_roleTitle : str):
-    with Session(Engine) as session:
+    with Session(engine) as session:
         stmt = select(WeatherUserRole).where(WeatherUserRole.roleTitle == i_roleTitle)
         checkExistingRole = session.execute(stmt).first()
 
@@ -111,7 +111,7 @@ def checkExistingRole(i_roleTitle : str):
             return False
 
 def getRoleForUser(user : WeatherLoginUserInfo):
-    with Session(Engine) as session:
+    with Session(engine) as session:
         stmt = select(WeatherLogin.role).where(WeatherLogin.username == user.username)
         result = session.execute(stmt).first()
 
@@ -124,7 +124,7 @@ async def root():
 
 @app.get("/weather/all")
 async def get_info():
-    with Session(Engine) as session:
+    with Session(engine) as session:
         statement = select(WeatherInfo)
 
         res = session.execute(statement).mappings().all()
@@ -132,7 +132,7 @@ async def get_info():
 
 @app.get("/weather/years/all")
 async def get_years():
-    with (Session(Engine) as session):
+    with (Session(engine) as session):
         statement = (
             select(extract('year', WeatherInfo.date))
             .distinct()
@@ -143,7 +143,7 @@ async def get_years():
 
 @app.get("/weather/year/{year}")
 async def get_info(year: int):
-    with Session(Engine) as session:
+    with Session(engine) as session:
         statement = select(WeatherInfo).where(extract('year', WeatherInfo.date) == year)
         res = session.execute(statement).mappings().all()
     return res
@@ -188,7 +188,7 @@ async def get_info(i_startDate : str, i_endDate : str, type : str):
         days.append(current_date.strftime("%Y-%m-%d"))
         #print("Test1")
 
-        with Session(Engine) as session:
+        with Session(engine) as session:
 
             stmt = select(dataType).where(WeatherInfo.date == current_date)
             value = session.execute(stmt).mappings().first()
@@ -245,7 +245,7 @@ async def get_prediction(target_date: str,):
 
     while current_date < predict_date:
         days.append(current_date.strftime("%Y-%m-%d"))
-        with Session(Engine) as session:
+        with Session(engine) as session:
             # Min
             stmt_ind = select(WeatherInfo.temp_max).where(WeatherInfo.date == current_date)
             row_ind = session.execute(stmt_ind).mappings().first()
@@ -325,7 +325,7 @@ async def get_prediction(target_date: str,):
 @app.post("/weather/addEntry")
 async def add_entry(entry : WeatherCreate):
 
-    with Session(Engine) as session:
+    with Session(engine) as session:
         stmt = select(WeatherInfo).where(WeatherInfo.id == entry.i_id)
         result = session.execute(stmt).first()
 
@@ -360,7 +360,7 @@ async def update_entry(entry : WeatherCreate):
 @app.post("/weather/deleteEntry")
 async def delete_entry(entry : WeatherDeleteWithId):
 
-    with Session(Engine) as session:
+    with Session(engine) as session:
         stmt = delete(WeatherInfo).where(WeatherInfo.id == entry.id)
         result = session.execute(stmt)
         session.commit()
@@ -373,7 +373,7 @@ async def delete_entry(entry : WeatherDeleteWithId):
 @app.post("/weather/login")
 async def get_login(entry : WeatherLoginUserInfo):
 
-    with Session(Engine) as session:
+    with Session(engine) as session:
         stmt = select(WeatherLogin.password).where(WeatherLogin.username == entry.username)
         tmp = session.execute(stmt).first()
 
@@ -425,7 +425,7 @@ async def createNewUser(newUserInfo : WeatherLoginUserInfo):
 
 @app.post("/weather/deleteUser")
 async def deleteUser(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), userToDelete : WeatherLoginUserInfo = Body() ):
-    with Session(Engine) as session:
+    with Session(engine) as session:
         currentUserStmt = select(WeatherLogin).where(WeatherLogin.username == currentUser.username)
         currentUserResult = session.execute(currentUserStmt).first()
 
@@ -478,7 +478,7 @@ async def deleteUser(currentUser : WeatherLoginUserInfo = Depends(get_current_us
 
 @app.put("/weather/updateUser")
 async def updateUser(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), newUserData : WeatherLoginUserInfo = Body()):
-    with Session(Engine) as session:
+    with Session(engine) as session:
 
         ## Updates the role of a user if the current user is an admin (works)
         is_admin = (currentUser.role == 'admin')
@@ -550,7 +550,7 @@ async def updateUser(currentUser : WeatherLoginUserInfo = Depends(get_current_us
 @app.get("/weather/getRoles")
 async def getRoles(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token)):
     if currentUser.role == 'admin':
-        with Session(Engine) as session:
+        with Session(engine) as session:
             stmt = select(WeatherUserRole)
             result = session.execute(stmt).scalars().all()
 
@@ -568,7 +568,7 @@ async def getRoles(currentUser : WeatherLoginUserInfo = Depends(get_current_user
 async def createNewRole(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), newRole : WeatherUserRoleInfo = Body()):
     if currentUser.role == 'admin':
 
-        with Session(Engine) as session:
+        with Session(engine) as session:
 
             result = checkExistingRole(newRole.roleTitle)
 
@@ -608,7 +608,7 @@ async def getUserRole(user : WeatherLoginUserInfo):
 @app.get("/weather/getAllUsers")
 async def getAllUsers(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token)):
     if currentUser.role == 'admin':
-        with Session(Engine) as session:
+        with Session(engine) as session:
             stmt = select(WeatherLogin)
             result = session.execute(stmt).scalars().all()
 
@@ -631,7 +631,7 @@ async def getAllUsers(currentUser : WeatherLoginUserInfo = Depends(get_current_u
 @app.put("/weather/updateUserRoles")
 async def updateUserRoles(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), users: List[WeatherLoginUserInfo] = Body()):
     if currentUser.role == "admin":
-        with Session(Engine) as session:
+        with Session(engine) as session:
             for user in users:
                 stmt = update(WeatherLogin).where(WeatherLogin.username == user.username).values(role = user.role)
                 session.execute(stmt)

@@ -4,8 +4,8 @@ from pydantic import BaseModel
 from datetime import date
 
 url = "mysql+pymysql://root:password@localhost:3306/weather_data"
-Engine = create_engine(url, echo=True)
-session = Session(Engine)
+engine = create_engine(url, echo=True)
+session = Session(engine)
 
 Base = declarative_base()
 
@@ -57,6 +57,3 @@ class WeatherUserRoleInfo(BaseModel):
 class UserRequest(BaseModel):
     currentUser: WeatherLoginUserInfo
     newUserData: WeatherLoginUserInfo
-
-Base.metadata.create_all(Engine)
-

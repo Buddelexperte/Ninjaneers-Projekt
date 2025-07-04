@@ -1,13 +1,10 @@
 from datetime import date
 import csv
-from src.settings import session, WeatherInfo, WeatherLogin, WeatherUserRole
+from src.settings import Base, session, WeatherInfo, WeatherLogin, WeatherUserRole, engine
 from apifolder.hashing import hashPassword, verifyUnhashed
 
-# Delete all prev records
-session.query(WeatherInfo).delete()
-session.query(WeatherLogin).delete()
-session.query(WeatherUserRole).delete()
-session.commit()
+Base.metadata.drop_all(bind=engine)
+Base.metadata.create_all(bind=session.bind)
 
 rows = []
 with open("weather.csv", 'r') as file:
@@ -39,16 +36,9 @@ for row in rows:
 
     session.add(new_set)
 
-adminRoleSet = WeatherUserRole(
-    roleTitle = "admin",
-)
-
-userRoleSet = WeatherUserRole(
-    roleTitle = "user",
-)
-
-session.add(adminRoleSet)
-session.add(userRoleSet)
+adminRole = WeatherUserRole(roleTitle="admin")
+userRole = WeatherUserRole(roleTitle="user")
+session.add_all([adminRole, userRole])
 
 new_login_set = WeatherLogin(
     username = 'root',
@@ -57,7 +47,4 @@ new_login_set = WeatherLogin(
 )
 
 session.add(new_login_set)
-
-
-# Commiting changes
 session.commit()
