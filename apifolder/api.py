@@ -346,8 +346,8 @@ async def delete_entry(entry : WeatherDeleteWithId):
 async def get_login(entry : WeatherLoginUserInfo):
 
     with Session(Engine) as session:
-        stmt = select(WeatherLogin.password).where(WeatherLogin.username == entry.username)
-        stmtID = select(WeatherLogin.id).where(WeatherLogin.username == entry.username)
+        stmt = select(WeatherLoginEmail.password).where(WeatherLoginEmail.username == entry.username)
+        stmtID = select(WeatherLoginEmail.isVerified).where(WeatherLoginEmail.username == entry.username)
         tmp = session.execute(stmt).first()
         tmpID = session.execute(stmtID).first()
 
@@ -360,8 +360,12 @@ async def get_login(entry : WeatherLoginUserInfo):
         result = tmp[0]
 
         resultID = tmpID[0]
-        print(resultID)
 
+
+        if resultID == False:
+            return {"success": False,
+                    "message" : "Nicht verified"
+            }
 
         verification = verifyUnhashed(result, entry.password)
         if verification is True:
