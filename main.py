@@ -16,6 +16,7 @@ WEATHER_WEB_DIR = os.path.join(PROJECT_DIR, "weatherWeb/")
 FASTAPI_MODULE = "apifolder.api:app"  # e.g., main.py with app inside
 UVICORN_HOST = "127.0.0.1"
 UVICORN_PORT = "8000"
+DTB_INIT_FLAG = "init-dtb-complete"
 
 
 def run_in_new_terminal(command, cwd=None):
@@ -57,7 +58,7 @@ def install_requirements():
     run_command("pip install -r requirements.txt", cwd=PROJECT_DIR)
 
 def try_reset_dtb():
-    flag_path = os.path.join(PROJECT_DIR, "init-dtb-complete")
+    flag_path = os.path.join(PROJECT_DIR, DTB_INIT_FLAG)
     if not os.path.exists(flag_path):
         print("First run detected. Running reset-dtb.py ...")
         run_command(f"python {DATABASE_SETUP_SQL}", cwd=PROJECT_DIR)
