@@ -1,5 +1,7 @@
 
 from datetime import datetime, timedelta
+
+
 from jose import jwe, JWTError
 import json
 import os
@@ -22,18 +24,19 @@ def createPayload(user : WeatherLoginUserInfo):
 
 
 def createEmailTokenPayload(userId : int, expireIn : int): #expireIn is requested in minutes
-    payloadData = {"sub" : userId, "exp" : int(datetime.now() + timedelta(minutes = expireIn))}
+    payloadData = {"sub" : userId, "exp" : int((datetime.now() + timedelta(minutes=expireIn)).timestamp())}
     return payloadData
 
-def create_encrypted_verification_token(userId : int):
-    payload = createEmailTokenPayload(userId, 15)          # 1. Wir erzeugen einen JSON-String mit Userdaten
-    encrypted_token = jwe.encrypt(          # 2. Wir verschlüsseln den JSON-String mit deinem Schlüssel
-        payload.encode(),                   # 3. payload.encode() wandelt den String in Bytes um (wichtig für Verschlüsselung)
-        SECRET_KEY,                        # 4. Der geheime Schlüssel (16 Bytes)
-        algorithm= "dir",                  # 5. Algorithmus für Schlüssel-Handling (hier 'direct', wir nehmen den Schlüssel direkt)
-        encryption="A128GCM"              # 6. Verschlüsselungsmethode AES-GCM mit 128-Bit Schlüssel
+def create_encrypted_verification_token(userId: int):
+    payload_dict = createEmailTokenPayload(userId, 15)   # Get the dictionary
+    payload_json = json.dumps(payload_dict)              # Convert dict to JSON string
+    encrypted_token = jwe.encrypt(
+        payload_json.encode(),                           # Encode JSON string to bytes
+        SECRET_KEY,
+        algorithm="dir",
+        encryption="A128GCM"
     )
-    return encrypted_token                 # 7. Wir geben den verschlüsselten Token (als String) zurück
+    return encrypted_token
 
 def create_decrypted_verification_token(token : str):
     decrypted_bytes = jwe.decrypt(token, SECRET_KEY)  # 1. Entschlüsseln des Tokens, Ergebnis sind Bytes

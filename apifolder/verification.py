@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 
 from apifolder.api import WeatherLogin, WeatherLoginUserInfo
 from apifolder.token import create_decrypted_verification_token
@@ -6,13 +6,13 @@ from apifolder.token import create_decrypted_verification_token
 def verifyRegistrationToken(token : str):
     tokenInformations = create_decrypted_verification_token(token)
 
-    userId = tokenInformations.userId
+    userId = tokenInformations.id
 
-    currentTime = int(datetime.now().timestamp())
-    expTime = tokenInformations.expTime()
+    currentTime = int((datetime.now().timestamp()))
+    expiration = tokenInformations.expTime
 
-    result = expTime is not None and expTime > currentTime
+    notExpired = expiration is not None and expiration > currentTime
 
-    return userId, result
+    return userId, notExpired
 
 

@@ -1,6 +1,6 @@
 from datetime import date
 import csv
-from src.settings import session, WeatherInfo, WeatherLogin, WeatherUserRole
+from src.settings import session, WeatherInfo, WeatherLogin, WeatherUserRole, UserVerification, WeatherLoginEmail
 from apifolder.hashing import hashPassword, verifyUnhashed
 
 # Delete all prev records
@@ -51,6 +51,23 @@ new_login_set = WeatherLogin(
 
 session.add(new_login_set)
 
+
+new_login_email_set = WeatherLoginEmail(
+    username="root",
+    password= hashPassword("0"),
+    role = 'admin',
+    email="admin@gmail.com",
+    isVerified=True
+)
+
+session.add(new_login_email_set)
+
+new_verification_set = UserVerification(
+    userId = 0,
+    token = ''
+)
+
+session.add(new_verification_set)
 
 # Commiting changes
 session.commit()
