@@ -56,6 +56,16 @@ def install_requirements():
     print("Installing requirements.txt packages...")
     run_command("pip install -r requirements.txt", cwd=PROJECT_DIR)
 
+def try_reset_dtb():
+    flag_path = os.path.join(PROJECT_DIR, "init-dtb-complete")
+    if not os.path.exists(flag_path):
+        print("First run detected. Running reset-dtb.py ...")
+        run_command(f"python {DATABASE_SETUP_SQL}", cwd=PROJECT_DIR)
+        with open(flag_path, "w") as f:
+            f.write("done")
+    else:
+        print("Not first run, skipping reset-dtb.py")
+
 def start_npm():
     print("Starting npm...")
     run_in_new_terminal("npm run dev", cwd=WEATHER_WEB_DIR)
@@ -71,20 +81,11 @@ def open_browser():
 
 def main():
     install_requirements()
-
-    flag_path = os.path.join(PROJECT_DIR, "init-dtb-complete")
-    if not os.path.exists(flag_path):
-        print("First run detected. Running reset-dtb.py ...")
-        run_command(f"python {DATABASE_SETUP_SQL}", cwd=PROJECT_DIR)
-        # Create the flag file to mark first run done
-        with open(flag_path, "w") as f:
-            f.write("done")
-    else:
-        print("Not first run, skipping reset-dtb.py")
-
+    try_reset_dtb() # Checks for "first run" flag, then resets database if not found
+    # Maybe needs MySQL to run as well
     start_npm()
     start_uvicorn()
-    open_browser()   # open web app URL in default browser
+    open_browser()   # open web app URL in default browser, after some delay
 
 
 if __name__ == "__main__":
