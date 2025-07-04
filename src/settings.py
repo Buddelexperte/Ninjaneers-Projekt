@@ -1,4 +1,4 @@
-from sqlalchemy import Table, Column, Integer, String, Date, Float, create_engine
+from sqlalchemy import Table, Column, Integer, String, Date, Float, create_engine, Boolean
 from sqlalchemy.orm import Session, declarative_base
 from pydantic import BaseModel
 from datetime import date
@@ -28,6 +28,9 @@ class WeatherLogin(Base):
     username = Column(String(50))
     password = Column(String(256))
     role = Column(String(50))
+    email = Column(String(50))
+    isVerified = Column(Boolean)
+
 
 class WeatherUserRole(Base):
     __tablename__ = 'weather_user_role'
@@ -51,9 +54,16 @@ class WeatherLoginUserInfo(BaseModel):
     username: str
     password : str
     role : str
+    email : str
+    isVerified : bool
+
 
 class WeatherUserRoleInfo(BaseModel):
     roleTitle: str
+
+class UserVerificationObject(BaseModel):
+    id : int
+    expTime : int
 
 
 

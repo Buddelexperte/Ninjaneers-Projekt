@@ -368,12 +368,15 @@ async def delete_entry(entry : WeatherDeleteWithId):
     return {"Das Löschen war: ": result}
 
 
+
 @app.post("/weather/login")
 async def get_login(entry : WeatherLoginUserInfo):
 
     with Session(Engine) as session:
         stmt = select(WeatherLogin.password).where(WeatherLogin.username == entry.username)
+        stmtID = select(WeatherLogin.id).where(WeatherLogin.username == entry.username)
         tmp = session.execute(stmt).first()
+        tmpID = session.execute(stmtID).first()
 
         if not tmp:
             return {
@@ -383,14 +386,20 @@ async def get_login(entry : WeatherLoginUserInfo):
 
         result = tmp[0]
 
+        resultID = tmpID[0]
+        print(resultID)
+
+
         verification = verifyUnhashed(result, entry.password)
         if verification is True:
             role = getUserRoleF(entry)
             entry.role = role
-            print(role)
+
+            print(entry)
+
 
             encrypted_token = create_encrypted_token(entry) #encrypted_token = string
-            print(decrypt_token(encrypted_token))
+            #print(decrypt_token(encrypted_token))
             return {"success": True,
                     "message" : "Encrypted Token: ",
                     "body": {"access_token": encrypted_token,

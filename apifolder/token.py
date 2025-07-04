@@ -1,11 +1,11 @@
-from jose import jwt, JWTError
+
 from datetime import datetime, timedelta
-from jose import jwe
+from jose import jwe, JWTError
 import json
 import os
-from fastapi import Depends, HTTPException, Header, status
-from src.settings import WeatherLoginUserInfo,WeatherLogin
-from fastapi import Security, HTTPException, status
+
+from src.settings import WeatherLoginUserInfo,WeatherLogin, UserVerificationObject
+from fastapi import Security, HTTPException, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 
@@ -18,11 +18,34 @@ bearer_scheme = HTTPBearer()
 
 def createPayload(user : WeatherLoginUserInfo):
     payloadData = {"sub" : user.username, "role" : user.role}
-
     return json.dumps(payloadData)
 
+
+def createEmailTokenPayload(userId : int, expireIn : int): #expireIn is requested in minutes
+    payloadData = {"sub" : userId, "exp" : int(datetime.now() + timedelta(minutes = expireIn))}
+    return payloadData
+
+def create_encrypted_verification_token(userId : int):
+    payload = createEmailTokenPayload(userId, 15)          # 1. Wir erzeugen einen JSON-String mit Userdaten
+    encrypted_token = jwe.encrypt(          # 2. Wir verschlüsseln den JSON-String mit deinem Schlüssel
+        payload.encode(),                   # 3. payload.encode() wandelt den String in Bytes um (wichtig für Verschlüsselung)
+        SECRET_KEY,                        # 4. Der geheime Schlüssel (16 Bytes)
+        algorithm= "dir",                  # 5. Algorithmus für Schlüssel-Handling (hier 'direct', wir nehmen den Schlüssel direkt)
+        encryption="A128GCM"              # 6. Verschlüsselungsmethode AES-GCM mit 128-Bit Schlüssel
+    )
+    return encrypted_token                 # 7. Wir geben den verschlüsselten Token (als String) zurück
+
+def create_decrypted_verification_token(token : str):
+    decrypted_bytes = jwe.decrypt(token, SECRET_KEY)  # 1. Entschlüsseln des Tokens, Ergebnis sind Bytes
+    decrypted_str = decrypted_bytes.decode()  # 2. Bytes zurück in String umwandeln (JSON)
+    data = json.loads(decrypted_str)
+
+    result = UserVerificationObject(id=data.get("sub"), expTime=data.get("exp"))
+    return result
+
+
 #credits: chatgpt
-def create_encrypted_token(user: WeatherLoginUserInfo) -> str:
+def create_encrypted_token(user: WeatherLoginUserInfo):
     payload = createPayload(user)          # 1. Wir erzeugen einen JSON-String mit Userdaten
     encrypted_token = jwe.encrypt(          # 2. Wir verschlüsseln den JSON-String mit deinem Schlüssel
         payload.encode(),                   # 3. payload.encode() wandelt den String in Bytes um (wichtig für Verschlüsselung)
@@ -38,7 +61,7 @@ def decrypt_token(token: str) -> dict:
     decrypted_bytes = jwe.decrypt(token, SECRET_KEY)  # 1. Entschlüsseln des Tokens, Ergebnis sind Bytes
     decrypted_str = decrypted_bytes.decode()# 2. Bytes zurück in String umwandeln (JSON)
     data = json.loads(decrypted_str)                   # 3. JSON-String in Python-Dict parsen und zurückgeben
-    userInfo = WeatherLoginUserInfo(username=data.get("sub"), password="", role=data.get("role"))
+    userInfo = WeatherLoginUserInfo(username=data.get("sub"), password="", role=data.get("role"), email = "", isVerified=True)
 
     return userInfo
 
