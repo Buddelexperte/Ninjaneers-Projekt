@@ -14,7 +14,7 @@ from sklearn.linear_model import LinearRegression
 from argon2 import PasswordHasher
 from apifolder.hashing import hashPassword, verifyUnhashed
 from apifolder.token import createPayload, create_encrypted_token, decrypt_token, get_current_user_by_token, create_encrypted_verification_token
-from apifolder.verification import verifyRegistrationToken
+from apifolder.verification import verifyRegistrationToken, send_verification_email
 
 from typing import List
 
@@ -69,10 +69,6 @@ def updateData(data : WeatherCreate):
             wind=data.i_wind,
             weather=data.i_weather)
         )
-
-
-
-
 
         session.execute(stmt)
         session.commit()
@@ -439,6 +435,10 @@ async def createNewUser(newUserInfo : WeatherLoginUserInfoEmail):
             session.add(newUserVerification)
             session.commit()
 
+            token_str = token.decode("utf-8")
+
+            send_verification_email(newUserInfo.email, token_str)
+
 
 
 
@@ -651,8 +651,8 @@ async def getPersonalInfo(currentUser : WeatherLoginUserInfo = Depends(get_curre
             }
 
 
-@app.post("/weather/verifyRegistration")
-async def verifyRegistration(token : str):
+@app.get("/weather/verifyRegistration")
+async def verifyRegistration(token: str):
 
     userid, isNotExpired = verifyRegistrationToken(token)
 
@@ -675,6 +675,9 @@ async def verifyRegistration(token : str):
 
         else:
             stmt = delete(UserVerification).where(UserVerification.user_id == userid)
+            session.execute(stmt)
+            session.commit()
+
 
             return {"success": False,
                     "message" : "Token ist nicht gültig"
