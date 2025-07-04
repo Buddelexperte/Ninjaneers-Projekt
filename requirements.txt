@@ -1,5 +1,6 @@
 annotated-types==0.7.0
 anyio==4.9.0
+argon2==0.1.10
 argon2-cffi==25.1.0
 argon2-cffi-bindings==21.2.0
 certifi==2025.6.15
@@ -53,6 +54,7 @@ starlette==0.46.2
 threadpoolctl==3.6.0
 timeframe==3.0.3
 tornado==6.5.1
+types-pytz==2025.2.0.20250516
 typing-inspection==0.4.1
 typing_extensions==4.14.0
 tzdata==2025.2
