@@ -16,6 +16,7 @@ class Signup extends Component {
     super(props);
     this.state = {
       username: "",
+      email: "",
       password: "",
       rep_password: "",
       role: "",
@@ -28,7 +29,7 @@ class Signup extends Component {
 
   handleSubmit = async (e) => {
     e.preventDefault();
-    const { username, password, rep_password, role } = this.state;
+    const { username, email, password, rep_password, role } = this.state;
 
     if (password !== rep_password) {
       alert("Passwords must be repeated");
@@ -37,7 +38,7 @@ class Signup extends Component {
 
     const res = await apiRequest("signup", false, {
       method: "POST",
-      body: { username, password, role },
+      body: { "username" : username, "password": password, "role": role, "email": email, "isVerified": false},
     });
 
     if (res.success) {
@@ -48,7 +49,7 @@ class Signup extends Component {
   };
 
   render() {
-    const { username, password, rep_password } = this.state;
+    const { username, email, password, rep_password } = this.state;
 
     const SIGNUP_FIELDS = [
       {
@@ -57,6 +58,13 @@ class Signup extends Component {
         type: "text",
         value: username,
         placeholder: "Enter your username",
+      },
+      {
+        label: "E-Mail:",
+        key: "email",
+        type: "email",
+        value: email,
+        placeholder: "Enter your email",
       },
       {
         label: "Password:",

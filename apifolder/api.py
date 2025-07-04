@@ -1,13 +1,9 @@
 from datetime import date, timedelta
-from fastapi import Body, Depends
 import matplotlib.pyplot as universal_diagram
 from fastapi import FastAPI, APIRouter, Depends, Body
 from fastapi.middleware.cors import CORSMiddleware
-from pandas.core.indexes.multi import names_compat
-from sqlalchemy.testing.pickleable import User
 
-from src.settings import engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo, WeatherUserRole, WeatherUserRoleInfo
-from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, \
+from src.settings import engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, \
     WeatherLoginUserInfo, WeatherUserRole, WeatherUserRoleInfo, UserVerification, WeatherLoginUserInfoEmail, WeatherLoginEmail
 from sqlalchemy import select, extract, update, delete
 import base64
@@ -15,9 +11,9 @@ import numpy as np
 import io
 from sklearn.linear_model import LinearRegression
 from apifolder.hashing import hashPassword, verifyUnhashed
-from apifolder.token import createPayload, create_encrypted_token, decrypt_token, get_current_user_by_token, create_encrypted_verification_token
+from apifolder.token import create_encrypted_verification_token
 from apifolder.verification import verifyRegistrationToken, send_verification_email
-from apifolder.token import create_encrypted_token, decrypt_token, get_current_user_by_token
+from apifolder.token import create_encrypted_token, get_current_user_by_token
 
 from typing import List
 
@@ -430,7 +426,7 @@ async def get_login(entry : WeatherLoginUserInfo):
 @app.post("/weather/signup")
 async def createNewUser(newUserInfo : WeatherLoginUserInfoEmail):
     # USer darf nicht erstelle werden, wenn es die rolle nicht gibt
-        with Session(Engine) as session:
+        with Session(engine) as session:
             stmt = select(WeatherLogin.username).where(WeatherLogin.username == newUserInfo.username)
 
             result = session.execute(stmt).first()
@@ -725,7 +721,7 @@ async def verifyRegistration(token: str):
 
 
 
-    with Session(Engine) as session:
+    with Session(engine) as session:
         if isNotExpired:
             stmt = update(WeatherLoginEmail).where(WeatherLoginEmail.id == userid).values(isVerified = True)
             deleteRegistrationSet = delete(UserVerification).where(UserVerification.userId == userid)
