@@ -1,17 +1,22 @@
 from datetime import date, timedelta
 from fastapi import Body, Depends
 import matplotlib.pyplot as universal_diagram
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pandas.core.indexes.multi import names_compat
+from sqlalchemy.testing.pickleable import User
 
 from src.settings import engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, WeatherLoginUserInfo, WeatherUserRole, WeatherUserRoleInfo
+from src.settings import Engine, WeatherInfo, Session, WeatherCreate, WeatherDeleteWithId, WeatherLogin, \
+    WeatherLoginUserInfo, WeatherUserRole, WeatherUserRoleInfo, UserVerification, WeatherLoginUserInfoEmail, WeatherLoginEmail
 from sqlalchemy import select, extract, update, delete
 import base64
 import numpy as np
 import io
 from sklearn.linear_model import LinearRegression
 from apifolder.hashing import hashPassword, verifyUnhashed
+from apifolder.token import createPayload, create_encrypted_token, decrypt_token, get_current_user_by_token, create_encrypted_verification_token
+from apifolder.verification import verifyRegistrationToken, send_verification_email
 from apifolder.token import create_encrypted_token, decrypt_token, get_current_user_by_token
 
 from typing import List
@@ -375,7 +380,9 @@ async def get_login(entry : WeatherLoginUserInfo):
 
     with Session(engine) as session:
         stmt = select(WeatherLogin.password).where(WeatherLogin.username == entry.username)
+        stmtID = select(WeatherLoginEmail.isVerified).where(WeatherLoginEmail.username == entry.username)
         tmp = session.execute(stmt).first()
+        tmpID = session.execute(stmtID).first()
 
         if not tmp:
             return {
@@ -386,14 +393,24 @@ async def get_login(entry : WeatherLoginUserInfo):
 
         result = tmp[0]
 
+        resultID = tmpID[0]
+
+
+        if resultID == False:
+            return {"success": False,
+                    "message" : "Nicht verified"
+            }
+
         verification = verifyUnhashed(result, entry.password)
         if verification is True:
             role = getRoleForUser(entry)
             entry.role = role
-            print(role)
+
+            print(entry)
+
 
             encrypted_token = create_encrypted_token(entry) #encrypted_token = string
-            print(decrypt_token(encrypted_token))
+            #print(decrypt_token(encrypted_token))
             return {
                 "success": True,
                 "message" : "Verfied login!",
@@ -411,17 +428,63 @@ async def get_login(entry : WeatherLoginUserInfo):
 
 
 @app.post("/weather/signup")
-async def createNewUser(newUserInfo : WeatherLoginUserInfo):
-    if not createUser(newUserInfo.username, newUserInfo.password, 'user'):
-        return {
-            "success": False,
-            "message" : "Name existiert bereits"
-        }
+async def createNewUser(newUserInfo : WeatherLoginUserInfoEmail):
+    # USer darf nicht erstelle werden, wenn es die rolle nicht gibt
+        with Session(Engine) as session:
+            stmt = select(WeatherLogin.username).where(WeatherLogin.username == newUserInfo.username)
 
-    return {
-        "success": True,
-        "message" : "Sign Up erfolgreich"
-    }
+            result = session.execute(stmt).first()
+
+            if result:
+                return {
+                    "success": False,
+                    "message": "Name existiert bereits"
+                }
+
+            hashedPassword = hashPassword(newUserInfo.password)
+
+            newUser = WeatherLogin(
+                username= newUserInfo.username,
+                password= hashedPassword,
+                role= "user", #chekcn ob rolle existiert
+            )
+
+            session.add(newUser)
+
+
+            newUserWithEmail = WeatherLoginEmail(
+                username=newUserInfo.username,
+                password=hashedPassword,
+                role="user",
+                email=newUserInfo.email,
+                isVerified=False
+            )
+
+            session.add(newUserWithEmail)
+            session.flush()
+
+            token = create_encrypted_verification_token(newUserWithEmail.id)
+
+            newUserVerification = UserVerification(
+                userId=newUserWithEmail.id,
+                token=token
+            )
+            print(newUserWithEmail.id)
+
+            session.add(newUserVerification)
+            session.commit()
+
+            token_str = token.decode("utf-8")
+
+            send_verification_email(newUserInfo.email, token_str)
+
+
+
+
+            return {
+                "success": True,
+                "message" : "Sign Up erfolgreich"
+            }
 
 @app.post("/weather/deleteUser")
 async def deleteUser(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token), userToDelete : WeatherLoginUserInfo = Body() ):
@@ -446,6 +509,8 @@ async def deleteUser(currentUser : WeatherLoginUserInfo = Depends(get_current_us
                 "success": False,
                 "message": f"User '{userToDelete.username}' existiert nicht und kann nicht gelöscht werden."
             }
+
+
 
         tmp = userToDeleteResult[0]
         userToDeleteRole = tmp.role
@@ -514,10 +579,7 @@ async def updateUser(currentUser : WeatherLoginUserInfo = Depends(get_current_us
                     "message": "Name bereits vorhanden, Vorgang abgebrochen",
                 }
 
-
-
         newUser = currentUser # Save new user info for new token
-
 
         # No user with given name
         if newUserData.password:
@@ -649,9 +711,43 @@ async def updateUserRoles(currentUser : WeatherLoginUserInfo = Depends(get_curre
 @app.get("/weather/getPersonalInfo")
 async def getPersonalInfo(currentUser : WeatherLoginUserInfo = Depends(get_current_user_by_token)):
 
+
     return {"success": True,
             "message ": "Userinfos",
             "body": {"username" : currentUser.username, "role" : currentUser.role}
+            }
+
+
+@app.get("/weather/verifyRegistration")
+async def verifyRegistration(token: str):
+
+    userid, isNotExpired = verifyRegistrationToken(token)
+
+
+
+    with Session(Engine) as session:
+        if isNotExpired:
+            stmt = update(WeatherLoginEmail).where(WeatherLoginEmail.id == userid).values(isVerified = True)
+            deleteRegistrationSet = delete(UserVerification).where(UserVerification.userId == userid)
+
+
+            session.execute(stmt)
+            session.execute(deleteRegistrationSet)
+            session.commit()
+
+            return {"success" : True,
+                    "message": "Passt"
+            }
+
+
+        else:
+            stmt = delete(UserVerification).where(UserVerification.user_id == userid)
+            session.execute(stmt)
+            session.commit()
+
+
+            return {"success": False,
+                    "message" : "Token ist nicht gültig"
             }
 
 
